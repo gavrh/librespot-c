@@ -1,12 +1,14 @@
-#ifndef LIBRESPOT_PLAYER_H
-#define LIBRESPOT_PLAYER_H
+#ifndef LIBRESPOT_PLAYER_HPP
+#define LIBRESPOT_PLAYER_HPP
 
 #include <string>
 
-class Librespot {
+namespace librespot {
+
+class Player {
 public:
-    Librespot(const std::string &lib_path);
-    ~Librespot();
+    Player(const std::string &lib_path);
+    ~Player();
 
     void play_track(const std::string &track_id);
 
@@ -16,4 +18,6 @@ private:
     PlayTrackFunc play_track_func;
 };
 
-#endif // LIBRESPOT_PLAYER_H
+}
+
+#endif // LIBRESPOT_PLAYER_HPP
