@@ -14,6 +14,6 @@ private:
     void* handle;
     typedef void (*PlayTrackFunc)(const char*);
     PlayTrackFunc play_track_func;
-}
+};
 
 #endif // LIBRESPOT_PLAYER_H

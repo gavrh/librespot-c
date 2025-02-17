@@ -1,4 +1,4 @@
-#include "player.hpp"
+#include <librespot/player.hpp>
 #include <dlfcn.h>
 #include <iostream>
 
@@ -11,7 +11,7 @@ Librespot::Librespot(const std::string &lib_path) {
 
     play_track_func = (PlayTrackFunc) dlsym(handle, "spotify_play");
     if (!play_track_func) {
-        std::cerr << "Failed to load spotify_play function: " dlerror() << std::endl;
+        std::cerr << "Failed to load spotify_play function: " << dlerror() << std::endl;
     }
 }
 
