@@ -16,7 +16,7 @@ target_include_directories(${PROJECT_NAME} PUBLIC include include/librespot)
 
 set_target_properties(${PROJECT_NAME} PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED YES)
 
-add_custom_target(librespot_rust
+add_custom_target(librespot_rust_build
     COMMAND cargo build --release
     WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/core
 )
@@ -33,6 +33,13 @@ add_library(librespot_rustlib SHARED IMPORTED)
 set_target_properties(librespot_rustlib PROPERTIES
     IMPORTED_LOCATION ${CMAKE_SOURCE_DIR}/core/target/release/${RUST_LIB_NAME}
 )
-add_dependencies(librespot_rustlib librespot_rust)
-
+add_dependencies(librespot_rustlib librespot_rust_build)
 target_link_libraries(${PROJECT_NAME} PRIVATE librespot_rustlib)
+
+install(TARGETS ${PROJECT_NAME}
+    ARCHIVE DESTINATION lib
+    LIBRARY DESTINATION lib
+    PUBLIC_HEADER DESTINATION inlcude
+)
+
+install(FILES ${CMAKE_SOURCE_DIR}/core/target/release/${RUST_LIB_NAME})
