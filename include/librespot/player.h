@@ -1,0 +1,4 @@
+#ifndef LIBRESPOT_PLAYER_H
+#define LIBRESPOT_PLAYER_H
+
+#endif // LIBRESPOT_PLAYER_H

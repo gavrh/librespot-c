@@ -1,2 +1,2 @@
 # librespot-c
-librespot rust library extern C wrapper
+librespot rust library C wrapper

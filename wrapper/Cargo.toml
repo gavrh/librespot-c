@@ -1,0 +1,10 @@
+[package]
+name = "respot"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+librespot = { version = "0.6.0", features = [ "alsa-backend", "pulseaudio-backend", "sdl-backend", "passthrough-decoder", "with-avahi"] }
