@@ -1,2 +1,2 @@
-# librespot-cpp
-librespot wrapper for C++
+# librespot-c
+librespot wrapper for C
