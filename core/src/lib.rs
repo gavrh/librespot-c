@@ -17,6 +17,16 @@ pub extern "C" fn player_free_rust(player: *mut Player) {
 }
 
 #[no_mangle]
+pub extern "C" fn player_play_rust(_player: *mut Player) {
+    println!("Player is playing");
+}
+
+#[no_mangle]
+pub extern "C" fn player_pause_rust(_player: *mut Player) {
+    println!("Player is paused");
+}
+
+#[no_mangle]
 pub extern "C" fn player_set_volume_rust(player: *mut Player, volume: i32) {
     if let Some(p) = unsafe { player.as_mut() } {
         p.volume = volume;
