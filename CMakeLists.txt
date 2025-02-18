@@ -44,7 +44,7 @@ install(TARGETS ${PROJECT_NAME}
     PUBLIC_HEADER DESTINATION inlcude
 )
 
-install(FILES ${CMAKE_SOURCE_DIR}/core/target/release/${RUST_LIB_NAME}
+install(FILES ${CMAKE_BINARY_DIR}/_deps/${PROJECT_NAME}-src/core/target/release/${RUST_LIB_NAME}
     DESTINATION lib
 )
 
