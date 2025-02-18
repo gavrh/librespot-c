@@ -44,10 +44,6 @@ install(TARGETS ${PROJECT_NAME}
     PUBLIC_HEADER DESTINATION inlcude
 )
 
-install(FILES ${CMAKE_BINARY_DIR}/_deps/${PROJECT_NAME}-src/core/target/release/${RUST_LIB_NAME}
-    DESTINATION lib
-)
-
 # make dev
 add_library(${PROJECT_NAME}_dev STATIC
     ${SOURCE_FILES}
