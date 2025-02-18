@@ -9,10 +9,12 @@ set(CMAKE_STATIC_LIBRARY_PREFIX "")
 
 file(GLOB SOURCE_FILES src/${PROJECT_NAME}/*.c)
 file(GLOB HEADER_FILES include/${PROJECT_NAME}/*.h)
+file(GLOB PRIVATE_HEADER_FILES src/${PROJECT_NAME}/*.h)
 
 add_library(${PROJECT_NAME} STATIC
     ${SOURCE_FILES}
     ${HEADER_FILES}
+    ${PRIVATE_HEADER_FILES}
 )
 
 target_include_directories(${PROJECT_NAME} PUBLIC include)

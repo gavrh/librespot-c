@@ -1,11 +1,6 @@
 #include <librespot/player.h>
+#include "player_rust.h"
 
-extern Player* player_new_rust();
-extern void player_free_rust(Player*);
-extern void player_play_rust(Player*);
-extern void player_pause_rust(Player*);
-extern void player_set_volume_rust(Player*, int);
-extern int player_get_volume_rust(const Player*);
 
 Player* player_new() {
     return player_new_rust();
