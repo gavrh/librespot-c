@@ -20,7 +20,7 @@ set_target_properties(${PROJECT_NAME} PROPERTIES C_STANDARD 17 C_STANDARD_REQUIR
 
 add_custom_target(librespot_rust_core
     COMMAND cargo build --release
-    WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/_deps/${PROJECT_NAME}-src/core
+    WORKING_DIRECTORY ${librespot_SOURCE_DIR}/core
 )
 
 if(WIN32)
@@ -33,7 +33,7 @@ endif()
 
 add_library(librespot_rust_lib SHARED IMPORTED)
 set_target_properties(librespot_rust_lib PROPERTIES
-    IMPORTED_LOCATION ${CMAKE_BINARY_DIR}/_deps/${PROJECT_NAME}-src/core/target/release/${RUST_LIB_NAME}
+    IMPORTED_LOCATION ${librespot_SOURCE_DIR}/core/target/release/${RUST_LIB_NAME}
 )
 add_dependencies(librespot_rust_lib librespot_rust_core)
 target_link_libraries(${PROJECT_NAME} PRIVATE librespot_rust_lib)
@@ -41,33 +41,9 @@ target_link_libraries(${PROJECT_NAME} PRIVATE librespot_rust_lib)
 install(TARGETS ${PROJECT_NAME}
     ARCHIVE DESTINATION lib
     LIBRARY DESTINATION lib
-    PUBLIC_HEADER DESTINATION inlcude
+    PUBLIC_HEADER DESTINATION include
 )
 
-install(FILES ${CMAKE_BINARY_DIR}/_deps/${PROJECT_NAME}-src/core/target/release/${RUST_LIB_NAME}
+install(FILES ${librespot_SOURCE_DIR}/core/target/release/${RUST_LIB_NAME}
     DESTINATION lib
-)
-
-# make dev
-add_library(${PROJECT_NAME}_dev STATIC
-    ${SOURCE_FILES}
-    ${HEADER_FILES}
-)
-
-add_custom_target(librespot_rust_core_dev
-    COMMAND cargo build --release
-    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/core
-)
-
-add_library(librespot_rust_lib_dev SHARED IMPORTED)
-set_target_properties(librespot_rust_lib_dev PROPERTIES
-    IMPORTED_LOCATION ${CMAKE_BINARY_DIR}/_deps/${PROJECT_NAME}-src/core/target/release/${RUST_LIB_NAME}
-)
-add_dependencies(librespot_rust_lib_dev librespot_rust_core_dev)
-target_link_libraries(${PROJECT_NAME}_dev PRIVATE librespot_rust_lib_dev)
-
-add_custom_target(dev
-    COMMAND ${CMAKE_COMMAND} --build . --target ${PROJECT_NAME}_dev
-    WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
-    COMMENT "Build for development (see if it compiles)"
 )
