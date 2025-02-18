@@ -33,7 +33,7 @@ endif()
 
 add_library(librespot_rust_lib SHARED IMPORTED)
 set_target_properties(librespot_rust_lib PROPERTIES
-    IMPORTED_LOCATION ${CMAKE_SOURCE_DIR}/core/target/release/${RUST_LIB_NAME}
+    IMPORTED_LOCATION ${CMAKE_BINARY_DIR}/_deps/${PROJECT_NAME}-src/core/target/release/${RUST_LIB_NAME}
 )
 add_dependencies(librespot_rust_lib librespot_rust_core)
 target_link_libraries(${PROJECT_NAME} PRIVATE librespot_rust_lib)
