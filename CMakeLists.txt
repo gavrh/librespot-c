@@ -7,9 +7,12 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_STATIC_LIBRARY_PREFIX "")
 
+file(GLOB SOURCE_FILES src/${PROJECT_NAME}/*.cpp)
+file(GLOB HEADER_FILES src/${PROJECT_NAME}/*.hpp)
+
 add_library(${PROJECT_NAME} STATIC
-    src/librespot/player.cpp
-    include/librespot/player.hpp
+    ${SOURCE_FILES}
+    ${HEADER_FILES}
 )
 
 target_include_directories(${PROJECT_NAME} PUBLIC include include/librespot)
@@ -42,6 +45,6 @@ install(TARGETS ${PROJECT_NAME}
     PUBLIC_HEADER DESTINATION inlcude
 )
 
-install(FILES ${CMAKE_SOURCE_DIR}/core/target/release/${RUST_LIB_NAME}
+install(FILES ${CMAKE_BINARY_DIR}/_deps/${PROJECT_NAME}-src/core/target/release/${RUST_LIB_NAME}
     DESTINATION lib
 )
