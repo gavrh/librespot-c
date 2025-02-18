@@ -1,37 +1,33 @@
 use std::ffi::CStr;
 use std::os::raw::c_char;
-use std::sync::{Arc, Mutex};
-use librespot::core::{Session, SessionConfig};
-use librespot::playback::config::PlayerConfig;
-use librespot::playback::mixer::VolumeGetter;
-use librespot::playback::player::Player;
+use std::ptr;
 
-#[no_mangle]
-pub extern "C" fn spotify_play(track_id: *const c_char) {
-    let track_id = unsafe { CStr::from_ptr(track_id).to_string_lossy() };
-
-    println!("Playing track: {}", track_id);
-}
+// test code
 
 #[repr(C)]
-pub struct CPlayer {
-    player: Arc<Mutex<Player>>,
+pub struct Player {
+    volume: i32,
 }
 
 #[no_mangle]
-pub extern "C" fn player_new() -> *mut CPlayer {
-    let player_config = PlayerConfig::default();
-    let session_config = SessionConfig::default();
-    let session = Session::new(session_config, None);
-    let player = Player::new(player_config, );
-    let c_player = CPlayer {
-        player: Arc::new(Mutex::new(player)),
-    };
-    Box::into_raw(Box::new(c_player))
+pub extern "C" fn player_new() -> *mut Player {
+    Box::into_raw(Box::new(Player { volume: 50 }))
 }
 
 #[no_mangle]
-pub extern "C" fn player_free(player: *mut CPlayer) {
+pub extern "C" fn player_free(player: *mut Player) {
     if player.is_null() { return; }
     unsafe { drop(Box::from_raw(player)) };
+}
+
+#[no_mangle]
+pub extern "C" fn player_set_volume(player: *mut Player, volume: i32) {
+    if let Some(p) = unsafe { player.as_mut() } {
+        p.volume = volume;
+    }
+}
+
+#[no_mangle]
+pub extern "C" fn player_get_volume(player: *const Player) -> i32 {
+    unsafe { player.as_ref().map_or(0, |p| p.volume) }
 }
