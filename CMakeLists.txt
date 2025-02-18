@@ -1,14 +1,14 @@
 cmake_minimum_required(VERSION 3.10)
 
-project(librespot VERSION 1.0.0 LANGUAGES CXX)
+project(librespot VERSION 1.0.0 LANGUAGES C)
 
-set(CMAKE_CXX_STANDARD 17)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
-set(CMAKE_CXX_EXTENSIONS OFF)
+set(CMAKE_C_STANDARD 17)
+set(CMAKE_C_STANDARD_REQUIRED ON)
+set(CMAKE_C_EXTENSIONS OFF)
 set(CMAKE_STATIC_LIBRARY_PREFIX "")
 
-file(GLOB SOURCE_FILES src/${PROJECT_NAME}/*.cpp)
-file(GLOB HEADER_FILES src/${PROJECT_NAME}/*.hpp)
+file(GLOB SOURCE_FILES src/${PROJECT_NAME}/*.c)
+file(GLOB HEADER_FILES src/${PROJECT_NAME}/*.h)
 
 add_library(${PROJECT_NAME} STATIC
     ${SOURCE_FILES}
@@ -16,10 +16,9 @@ add_library(${PROJECT_NAME} STATIC
 )
 
 target_include_directories(${PROJECT_NAME} PUBLIC include include/librespot)
+set_target_properties(${PROJECT_NAME} PROPERTIES C_STANDARD 17 C_STANDARD_REQUIRED YES)
 
-set_target_properties(${PROJECT_NAME} PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED YES)
-
-add_custom_target(librespot_rust_build
+add_custom_target(librespot_rust_core
     COMMAND cargo build --release
     WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/_deps/${PROJECT_NAME}-src/core
 )
@@ -32,12 +31,12 @@ else()
     set(RUST_LIB_NAME "librespot.so")
 endif()
 
-add_library(librespot_rustlib SHARED IMPORTED)
-set_target_properties(librespot_rustlib PROPERTIES
-    IMPORTED_LOCATION ${CMAKE_BINARY_DIR}/_deps/${PROJECT_NAME}-src/core/target/release/${RUST_LIB_NAME}
+add_library(librespot_rust_lib SHARED IMPORTED)
+set_target_properties(librespot_rust_lib PROPERTIES
+    IMPORTED_LOCATION ${CMAKE_SOURCE_DIR}/core/target/release/${RUST_LIB_NAME}
 )
-add_dependencies(librespot_rustlib librespot_rust_build)
-target_link_libraries(${PROJECT_NAME} PRIVATE librespot_rustlib)
+add_dependencies(librespot_rust_lib librespot_rust_core)
+target_link_libraries(${PROJECT_NAME} PRIVATE librespot_rust_lib)
 
 install(TARGETS ${PROJECT_NAME}
     ARCHIVE DESTINATION lib
@@ -45,6 +44,30 @@ install(TARGETS ${PROJECT_NAME}
     PUBLIC_HEADER DESTINATION inlcude
 )
 
-install(FILES ${CMAKE_BINARY_DIR}/_deps/${PROJECT_NAME}-src/core/target/release/${RUST_LIB_NAME}
+install(FILES ${CMAKE_SOURCE_DIR}/core/target/release/${RUST_LIB_NAME}
     DESTINATION lib
+)
+
+# make dev
+add_library(${PROJECT_NAME}_dev STATIC
+    ${SOURCE_FILES}
+    ${HEADER_FILES}
+)
+
+add_custom_target(librespot_rust_core_dev
+    COMMAND cargo build --release
+    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/core
+)
+
+add_library(librespot_rust_lib_dev SHARED IMPORTED)
+set_target_properties(librespot_rust_lib_dev PROPERTIES
+    IMPORTED_LOCATION ${CMAKE_BINARY_DIR}/_deps/${PROJECT_NAME}-src/core/target/release/${RUST_LIB_NAME}
+)
+add_dependencies(librespot_rust_lib_dev librespot_rust_core_dev)
+target_link_libraries(${PROJECT_NAME}_dev PRIVATE librespot_rust_lib_dev)
+
+add_custom_target(dev
+    COMMAND ${CMAKE_COMMAND} --build . --target ${PROJECT_NAME}_dev
+    WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+    COMMENT "Build for development (see if it compiles)"
 )
