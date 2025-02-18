@@ -21,7 +21,7 @@ set_target_properties(${PROJECT_NAME} PROPERTIES CXX_STANDARD 17 CXX_STANDARD_RE
 
 add_custom_target(librespot_rust_build
     COMMAND cargo build --release
-    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/core
+    WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/_deps/${PROJECT_NAME}-src/core
 )
 
 if(WIN32)
