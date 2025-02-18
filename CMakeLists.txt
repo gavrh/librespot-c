@@ -15,7 +15,7 @@ add_library(${PROJECT_NAME} STATIC
     ${HEADER_FILES}
 )
 
-target_include_directories(${PROJECT_NAME} PUBLIC include include/librespot)
+target_include_directories(${PROJECT_NAME} PUBLIC include)
 set_target_properties(${PROJECT_NAME} PROPERTIES C_STANDARD 17 C_STANDARD_REQUIRED YES)
 
 add_custom_target(librespot_rust_core
@@ -42,6 +42,10 @@ install(TARGETS ${PROJECT_NAME}
     ARCHIVE DESTINATION lib
     LIBRARY DESTINATION lib
     PUBLIC_HEADER DESTINATION inlcude
+)
+
+install(FILES ${CMAKE_BINARY_DIR}/_deps/${PROJECT_NAME}-src/core/target/release/${RUST_LIB_NAME}
+    DESTINATION lib
 )
 
 # make dev
