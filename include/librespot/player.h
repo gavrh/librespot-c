@@ -1,7 +1,7 @@
 #ifndef LIBRESPOT_PLAYER_H
 #define LIBRESPOT_PLAYER_H
 
-struct Player;
+typedef struct Player Player;
 Player *player_new();
 void player_free(Player*);
 void player_set_volume(Player*, int);
