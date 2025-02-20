@@ -7,9 +7,18 @@ set(CMAKE_C_STANDARD_REQUIRED ON)
 set(CMAKE_C_EXTENSIONS OFF)
 set(CMAKE_STATIC_LIBRARY_PREFIX "")
 
-file(GLOB SOURCE_FILES src/${PROJECT_NAME}/*.c)
-file(GLOB HEADER_FILES include/${PROJECT_NAME}/*.h)
-file(GLOB PRIVATE_HEADER_FILES src/${PROJECT_NAME}/*.h)
+file(GLOB SOURCE_FILES 
+    src/${PROJECT_NAME}/*.c
+    src/${PROJECT_NAME}/playback/*.c
+)
+file(GLOB HEADER_FILES
+    include/${PROJECT_NAME}/*.h
+    include/${PROJECT_NAME}/playback/*.h
+)
+file(GLOB PRIVATE_HEADER_FILES
+    src/${PROJECT_NAME}/*.h
+    src/${PROJECT_NAME}/playback/*.h
+)
 
 add_library(${PROJECT_NAME} STATIC
     ${SOURCE_FILES}
