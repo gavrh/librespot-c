@@ -1,5 +1,5 @@
-#ifndef PLAYER_RUST_H
-#define PLAYER_RUST_H
+#ifndef LIBRESPOT_PRIVATE_PLAYBACK_PLAYER_RUST_H
+#define LIBRESPOT_PRIVATE_PLAYBACK_PLAYER_RUST_H
 
 #ifdef __cplusplus
 extern "C" {
@@ -16,4 +16,4 @@ extern int player_get_volume_rust(const Player*);
 }
 #endif
 
-#endif // PLAYER_RUST_H
+#endif // LIBRESPOT_PRIVATE_PLAYBACK_PLAYER_RUST_H

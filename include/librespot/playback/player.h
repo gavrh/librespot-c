@@ -1,5 +1,5 @@
-#ifndef LIBRESPOT_PLAYER_H
-#define LIBRESPOT_PLAYER_H
+#ifndef LIBRESPOT_PLAYBACK_PLAYER_H
+#define LIBRESPOT_PLAYBACK_PLAYER_H
 
 #ifdef __cplusplus
 extern "C" {
@@ -17,4 +17,4 @@ int player_get_volume(const Player*);
 }
 #endif
 
-#endif // LIBRESPOT_PLAYER_H
+#endif // LIBRESPOT_PLAYBACK_PLAYER_H
