@@ -1,6 +1,5 @@
-#include <librespot/player.h>
+#include <librespot/playback/player.h>
 #include "player_rust.h"
-
 
 Player* player_new() {
     return player_new_rust();
