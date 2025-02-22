@@ -22,6 +22,7 @@ add_library(${PROJECT_NAME} STATIC
     ${HEADER_FILES}
     ${PRIVATE_HEADER_FILES}
 )
+set_target_properties(${PROJECT_NAME} PROPERTIES LINKER_LANGUAGE C)
 
 target_include_directories(${PROJECT_NAME} PUBLIC include)
 set_target_properties(${PROJECT_NAME} PROPERTIES C_STANDARD 17 C_STANDARD_REQUIRED YES)
