@@ -11,7 +11,7 @@ file(GLOB_RECURSE HEADER_FILES CONFIGURE_DEPENDS
     include/${PROJECT_NAME}/*.h
 )
 
-add_library(${PROJECT_NAME} STATIC ${SOURCE_FILES})
+add_library(${PROJECT_NAME} STATIC ${HEADER_FILES})
 set_target_properties(${PROJECT_NAME} PROPERTIES LINKER_LANGUAGE C)
 
 target_include_directories(${PROJECT_NAME} PUBLIC include)
