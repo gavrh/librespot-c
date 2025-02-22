@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.10)
+cmake_minimum_required(VERSION 3.12)
 
 project(librespot VERSION 1.0.0 LANGUAGES C)
 
@@ -7,17 +7,14 @@ set(CMAKE_C_STANDARD_REQUIRED ON)
 set(CMAKE_C_EXTENSIONS OFF)
 set(CMAKE_STATIC_LIBRARY_PREFIX "")
 
-file(GLOB SOURCE_FILES 
+file(GLOB_RECURSE SOURCE_FILES CONFIGURE_DEPENDS
     src/${PROJECT_NAME}/*.c
-    src/${PROJECT_NAME}/playback/*.c
 )
-file(GLOB HEADER_FILES
+file(GLOB_RECURSE HEADER_FILES CONFIGURE_DEPENDS
     include/${PROJECT_NAME}/*.h
-    include/${PROJECT_NAME}/playback/*.h
 )
-file(GLOB PRIVATE_HEADER_FILES
+file(GLOB_RECURSE PRIVATE_HEADER_FILES CONFIGURE_DEPENDS
     src/${PROJECT_NAME}/*.h
-    src/${PROJECT_NAME}/playback/*.h
 )
 
 add_library(${PROJECT_NAME} STATIC

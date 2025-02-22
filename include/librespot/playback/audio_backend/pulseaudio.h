@@ -1,0 +1,12 @@
+#ifndef LIBRESPOT_PLAYBACK_AUDIO_BACKEND_PULSEAUDIO_H
+#define LIBRESPOT_PLAYBACK_AUDIO_BACKEND_PULSEAUDIO_H
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif // LIBRESPOT_PLAYBACK_AUDIO_BACKEND_PULSEAUDIO_H
