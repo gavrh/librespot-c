@@ -146,10 +146,15 @@ pub fn oauth_build(oauth_builder: *mut OAuthBuilder) -> *mut OAuth {
         }
 
         let oauth_client = librespot_oauth_builder.build().unwrap();
+        let oauth_token: oauth::OAuthToken;
         
-        let redirect = OutputRedirect::redirect();
-        let oauth_token = oauth_client.get_access_token().unwrap();
-        redirect.restore();
+        if (*oauth_builder).auto_open {
+            let redirect = OutputRedirect::redirect();
+            oauth_token = oauth_client.get_access_token().unwrap();
+            redirect.restore();
+        } else {
+            oauth_token = oauth_client.get_access_token().unwrap();
+        }
 
         oauth_builder_free(oauth_builder);
         Box::into_raw(Box::new(
