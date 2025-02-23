@@ -9,3 +9,4 @@ crate-type = ["cdylib"]
 
 [dependencies]
 librespot = { git = "https://github.com/librespot-org/librespot", features = ["pulseaudio-backend"] }
+tokio = { version = "1.43.0", features = ["full"] }
