@@ -8,5 +8,6 @@ path = "./lib.rs"
 crate-type = ["cdylib"]
 
 [dependencies]
+libc = "0.2.170"
 librespot = { git = "https://github.com/librespot-org/librespot", features = ["pulseaudio-backend"] }
 tokio = { version = "1.43.0", features = ["full"] }
