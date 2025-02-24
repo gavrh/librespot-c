@@ -12,7 +12,9 @@ pub fn credentials_new(access_token: *const c_char) -> *mut Credentials {
         Box::into_raw(Box::new(
             Credentials {
                 credentials: Box::into_raw(Box::new(
-                    discovery::Credentials::with_access_token(CStr::from_ptr(access_token).to_str().unwrap())
+                    discovery::Credentials::with_access_token(
+                        CStr::from_ptr(access_token).to_str().unwrap()
+                    )
                 ))
             }
         ))

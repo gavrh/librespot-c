@@ -17,7 +17,7 @@ set_target_properties(${PROJECT_NAME} PROPERTIES LINKER_LANGUAGE C)
 target_include_directories(${PROJECT_NAME} PUBLIC include)
 set_target_properties(${PROJECT_NAME} PROPERTIES C_STANDARD 17 C_STANDARD_REQUIRED YES)
 
-add_custom_target(librespot_rust_core
+add_custom_target(librespot_core_rust
     COMMAND cargo build --release
     WORKING_DIRECTORY ${librespot_SOURCE_DIR}/core
 )
@@ -30,12 +30,12 @@ else()
     set(RUST_LIB_NAME "librespot.so")
 endif()
 
-add_library(librespot_rust_lib SHARED IMPORTED)
-set_target_properties(librespot_rust_lib PROPERTIES
+add_library(librespot_lib_rust SHARED IMPORTED)
+set_target_properties(librespot_lib_rust PROPERTIES
     IMPORTED_LOCATION ${librespot_SOURCE_DIR}/core/target/release/${RUST_LIB_NAME}
 )
-add_dependencies(librespot_rust_lib librespot_rust_core)
-target_link_libraries(${PROJECT_NAME} PRIVATE librespot_rust_lib)
+add_dependencies(librespot_lib_rust librespot_core_rust)
+target_link_libraries(${PROJECT_NAME} PRIVATE librespot_lib_rust)
 
 install(TARGETS ${PROJECT_NAME}
     ARCHIVE DESTINATION lib
