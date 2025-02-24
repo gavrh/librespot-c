@@ -1,6 +1,7 @@
 use librespot::core;
-use crate::discovery::Credentials;
 use tokio::runtime::Runtime;
+
+use crate::discovery::Credentials;
 
 #[repr(C)]
 pub struct SessionConfig {
