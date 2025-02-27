@@ -1,7 +1,9 @@
+use std::sync::{Arc, Mutex};
+
 use librespot::core;
 use tokio::runtime::Runtime;
 
-use crate::discovery::Credentials;
+use crate::discovery::{credentials_free, credentials_ref, Credentials};
 
 #[repr(C)]
 pub struct SessionConfig {
@@ -32,6 +34,12 @@ pub fn session_config_free(session_config: *mut SessionConfig) {
 #[repr(C)]
 pub struct Session {
     session: *mut core::Session,
+}
+
+pub fn session_box (session: *mut Session) -> Box<core::Session> {
+    unsafe {
+        Box::from_raw((*session).session)
+    }
 }
 
 #[no_mangle]
@@ -70,10 +78,13 @@ pub fn session_free(session: *mut Session) {
 pub fn session_connect(session: *mut Session, credentials: *mut Credentials) {
     unsafe {
         let rt = Runtime::new().expect("Failed to create spearate runtime.");
-        let box_session = Box::from_raw((*session).session);
-        let raw_credentials = *Box::from_raw((*credentials).credentials);
+        let session_ref = Arc::new(Mutex::new((*session).session));
+        let credentials_ref = credentials_ref(credentials);
         rt.block_on(async {
-            box_session.connect(raw_credentials, false).await.unwrap();
-        })
+            let session_locked = (*session_ref.lock().unwrap()).as_ref().unwrap();
+            session_locked.connect(credentials_ref.clone(), false).await.unwrap();
+        });
+
+        credentials_free(credentials);
     }
 }

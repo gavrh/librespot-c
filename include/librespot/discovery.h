@@ -7,6 +7,7 @@ extern "C" {
 
 typedef struct Credentials Credentials;
 extern Credentials* credentials_new(const char* access_token);
+extern void credentials_free(Credentials* credentials);
 
 #ifdef __cplusplus
 }

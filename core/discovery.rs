@@ -3,7 +3,13 @@ use std::ffi::{c_char, CStr};
 
 #[repr(C)]
 pub struct Credentials {
-    pub credentials: *mut discovery::Credentials,
+    credentials: *mut discovery::Credentials,
+}
+
+pub fn credentials_ref<'a>(credentials: *mut Credentials) -> &'a discovery::Credentials {
+    unsafe {
+        &*(*credentials).credentials
+    }
 }
 
 #[no_mangle]
@@ -18,5 +24,15 @@ pub fn credentials_new(access_token: *const c_char) -> *mut Credentials {
                 ))
             }
         ))
+    }
+}
+
+#[no_mangle]
+pub fn credentials_free(credentials: *mut Credentials) {
+    if credentials.is_null() {
+        return;
+    }
+    unsafe {
+        drop(Box::from_raw(credentials));
     }
 }
