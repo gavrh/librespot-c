@@ -18,7 +18,6 @@ extern void mixer_free(Mixer* mixer);
 extern uint16_t mixer_get_volume(Mixer* mixer);
 
 typedef struct PlayerConfig PlayerConfig;
-extern PlayerConfig* player_config_new(bool gapless, bool passthrough, bool normalisation);
 extern PlayerConfig* player_config_default();
 extern void player_config_free(PlayerConfig* player_config);
 
