@@ -1,9 +1,7 @@
-use std::sync::{Arc, Mutex};
-
 use librespot::core;
-use tokio::runtime::Runtime;
 
 use crate::discovery::{credentials_free, credentials_ref, Credentials};
+use crate::runtime::runtime;
 
 #[repr(C)]
 pub struct SessionConfig {
@@ -45,11 +43,10 @@ pub fn session_box(session: *mut Session) -> Box<core::Session> {
 #[no_mangle]
 pub fn session_new(session_config: *mut SessionConfig) -> *mut Session {
     unsafe {
-        let rt = Runtime::new().expect("Failed to create separate runtime.");
         let new_session = Box::into_raw(Box::new(
             Session {
                 session: Box::into_raw(Box::new(
-                    rt.block_on(async {
+                    runtime().block_on(async {
                         core::Session::new(
                             *Box::from_raw((*session_config).session_config),
                             None
@@ -77,15 +74,14 @@ pub fn session_free(session: *mut Session) {
 #[no_mangle]
 pub fn session_connect(session: *mut Session, credentials: *mut Credentials) {
     unsafe {
-        let rt = Runtime::new().expect("Failed to create spearate runtime.");
-        let session_ref = Arc::new(Mutex::new((*session).session));
         let credentials_ref = credentials_ref(credentials);
-        rt.block_on(async {
-            let session_locked = (*session_ref.lock().unwrap()).as_ref().unwrap();
-            session_locked.connect(credentials_ref.clone(), false).await.unwrap();
-            println!("{}", session_locked.session_id());
+
+        runtime().block_on(async {
+            let session_ref = &mut *(*session).session;
+            session_ref.connect(credentials_ref.clone(), false).await.unwrap();
         });
 
+        println!("{}", (*(*session).session).connection_id());
         credentials_free(credentials);
     }
 }
