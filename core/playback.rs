@@ -1,13 +1,19 @@
-use librespot::playback::{
-    config,
-    mixer,
-    player,
-    audio_backend
+use librespot::{
+    core,
+    playback::{
+        config,
+        mixer,
+        player,
+        audio_backend
+    }
 };
-use std::ffi::{CStr, c_char, c_uchar};
+use tokio::runtime::Runtime;
+use tokio_stream::wrappers::UnboundedReceiverStream;
+use tokio_stream::StreamExt;
+use std::ffi::{c_char, c_uchar, CStr};
 use std::sync::Arc;
 
-use crate::core::{Session, session_box};
+use crate::core::{Session, session_box, session_free};
 
 #[repr(C)]
 pub struct MixerConfig {
@@ -155,7 +161,6 @@ pub fn player_new(player_config: *mut PlayerConfig, session: *mut Session, mixer
     };
 
     unsafe {
-
         new_player = Box::into_raw(Box::new(
             Player {
                 player: Box::into_raw(Box::new(
@@ -171,6 +176,7 @@ pub fn player_new(player_config: *mut PlayerConfig, session: *mut Session, mixer
     }
 
     player_config_free(player_config);
+    session_free(session);
     return new_player;
 }
 
@@ -186,10 +192,82 @@ pub fn player_free(player: *mut Player) {
 
 #[no_mangle]
 pub fn player_is_valid(player: *mut Player) -> u8 {
-    if player.is_null() {
-        return 0;
-    }
     unsafe {
-        !Box::from_raw((*player).player).is_invalid() as u8
+        !(*(*player).player).is_invalid() as u8
+    }
+}
+
+#[no_mangle]
+pub fn player_load(player: *mut Player, spotify_uri: *const c_char, start_playing: c_uchar, position_ms: u32) {
+    unsafe {
+        match core::SpotifyId::from_uri(CStr::from_ptr(spotify_uri).to_str().unwrap()) {
+            Ok(id) => {
+                println!("player loading track: {:?}", id);
+                if !id.is_playable() {
+                    println!("track is not playable");
+                } else {
+                    (*(*player).player).load(id, start_playing != 0, position_ms);
+                    println!("RAN LOAD FUNCTION");
+                    let mut player_events = UnboundedReceiverStream::new((*(*player).player).get_player_event_channel());
+                    let rt = Runtime::new().unwrap();
+                    rt.block_on(async {
+                        loop {
+                            match player_events.next().await {
+                                Some(player::PlayerEvent::Playing {
+                                    play_request_id: _,
+                                    track_id,
+                                    position_ms
+                                }) => {
+                                    println!("{} : {}", track_id, position_ms);
+                                },
+                                Some(player::PlayerEvent::TimeToPreloadNextTrack {
+                                    play_request_id: _,
+                                    track_id: _,
+                                }) => {
+                                    match core::SpotifyId::from_uri("spotify:track:7iZGpuboJPQQGH07EprPnR") {
+                                        Ok(id) => {
+                                            println!("player loading track: {:?}", id);
+                                            if !id.is_playable() {
+                                                println!("track is not playable");
+                                            } else {
+                                                (*(*player).player).preload(id);
+                                            }
+                                        }
+                                        Err(e) => {
+                                            println!("error parsing uri: {:?}", e);
+                                        }
+                                    }
+                                },
+                                Some(player::PlayerEvent::EndOfTrack {
+                                    play_request_id: _,
+                                    track_id: _,
+                                }) => {
+                                    match core::SpotifyId::from_uri("spotify:track:7iZGpuboJPQQGH07EprPnR") {
+                                        Ok(id) => {
+                                            println!("player loading track: {:?}", id);
+                                            if !id.is_playable() {
+                                                println!("track is not playable");
+                                            } else {
+                                                (*(*player).player).load(id, true, 0);
+                                            }
+                                        }
+                                        Err(e) => {
+                                            println!("error parsing uri: {:?}", e);
+                                        }
+                                    }
+                                },
+                                Some(event) => {
+                                    println!("{event:?}");
+                                }
+                                None => {}
+                            }
+                        }
+                    })
+                }
+            },
+            Err(e) => {
+                eprintln!("Failed to load spotify uri: {}", e)
+            }
+        }
     }
 }

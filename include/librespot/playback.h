@@ -26,7 +26,7 @@ typedef struct Player Player;
 extern Player* player_new(PlayerConfig* player_config, Session* session, Mixer* mixer, const char* audio_backend);
 // extern void player_free(Player* player);
 extern bool player_is_valid(Player* player);
-
+extern void player_load(Player* player, const char* spotify_uri, bool start_playing, uint32_t position_ms);
 
 #ifdef __cplusplus
 }

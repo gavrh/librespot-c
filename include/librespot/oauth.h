@@ -5,7 +5,6 @@
 extern "C" {
 #endif
 
-typedef struct OAuthBuilder OAuthBuilder;
 typedef enum {
     OAUTH_SCOPE_APP_REMOTE_CONTROL = 1,
     OAUTH_SCOPE_PLAYLIST_MODIFY = 2,
@@ -36,6 +35,7 @@ typedef enum {
     OAUTH_SCOPE_ALL = 27
 } OAuthScope;
 
+typedef struct OAuthBuilder OAuthBuilder;
 extern OAuthBuilder* oauth_builder_new(const char* client_id, const char* redirect_uri);
 extern void oauth_builder_free(OAuthBuilder* oauth_builder);
 extern void oauth_builder_custom_message(OAuthBuilder* oauth_builder, const char* message);
