@@ -94,34 +94,6 @@ pub fn player_config_box(player_config: *mut PlayerConfig) -> Box<config::Player
 }
 
 #[no_mangle]
-pub fn player_config_new(
-    gapless: c_uchar,
-    passthrough: c_uchar,
-    normalisation: c_uchar
-) -> *mut PlayerConfig {
-    Box::into_raw(Box::new(
-        PlayerConfig {
-            player_config: Box::into_raw(Box::new(
-                config::PlayerConfig {
-                    bitrate: config::Bitrate::Bitrate320,
-                    ditherer: None,
-                    gapless: gapless != 0,
-                    passthrough: passthrough != 0,
-                    normalisation: normalisation != 0,
-                    normalisation_attack_cf: 0.0,
-                    normalisation_type: config::NormalisationType::Auto,
-                    normalisation_knee_db: 0.0,
-                    normalisation_method: config::NormalisationMethod::Basic,
-                    normalisation_pregain_db: 0.0,
-                    normalisation_release_cf: 0.0,
-                    normalisation_threshold_dbfs: 0.0
-                }
-            ))
-        }
-    ))
-}
-
-#[no_mangle]
 pub fn player_config_default() -> *mut PlayerConfig {
     Box::into_raw(Box::new(
         PlayerConfig {
@@ -151,7 +123,6 @@ pub struct Player {
 pub fn player_new(player_config: *mut PlayerConfig, session: *mut Session, mixer: *mut Mixer, _audio_backend: *const c_char) -> *mut Player {
 
     let new_player: *mut Player;
-    // let player_config_raw = player_config_raw(player_config);
     let sink_builder: audio_backend::SinkBuilder = move |device: Option<String>, format: config::AudioFormat| {
         audio_backend::find(
             Some("pulseaudio".to_string())
