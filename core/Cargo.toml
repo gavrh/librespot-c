@@ -11,3 +11,4 @@ crate-type = ["cdylib"]
 libc = "0.2.170"
 librespot = { git = "https://github.com/librespot-org/librespot", features = ["pulseaudio-backend"] }
 tokio = { version = "1.43.0", features = ["full"] }
+tokio-stream = { version = "0.1.17", features = ["full"] }

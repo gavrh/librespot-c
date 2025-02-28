@@ -36,7 +36,7 @@ pub struct Session {
     session: *mut core::Session,
 }
 
-pub fn session_box (session: *mut Session) -> Box<core::Session> {
+pub fn session_box(session: *mut Session) -> Box<core::Session> {
     unsafe {
         Box::from_raw((*session).session)
     }
@@ -83,6 +83,7 @@ pub fn session_connect(session: *mut Session, credentials: *mut Credentials) {
         rt.block_on(async {
             let session_locked = (*session_ref.lock().unwrap()).as_ref().unwrap();
             session_locked.connect(credentials_ref.clone(), false).await.unwrap();
+            println!("{}", session_locked.session_id());
         });
 
         credentials_free(credentials);
