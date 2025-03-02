@@ -7,6 +7,7 @@ use librespot::{
         audio_backend
     }
 };
+use tokio::sync::mpsc::UnboundedReceiver;
 use std::ffi::{c_char, c_uchar, CStr};
 use std::sync::Arc;
 
@@ -14,18 +15,14 @@ use crate::core::{Session, session_box, session_free};
 use crate::runtime::runtime;
 
 #[repr(C)]
-pub struct MixerConfig {
-    mixer_config: *mut mixer::MixerConfig,
-}
+pub struct MixerConfig(*mut mixer::MixerConfig);
 
 #[no_mangle]
 pub fn mixer_config_default() -> *mut MixerConfig {
     Box::into_raw(Box::new(
-        MixerConfig {
-            mixer_config: Box::into_raw(Box::new(
-                mixer::MixerConfig::default()
-            ))
-        }
+        MixerConfig(Box::into_raw(Box::new(
+            mixer::MixerConfig::default()
+        )))
     ))
 }
 
@@ -40,9 +37,7 @@ pub fn mixer_config_free(mixer_config: *mut MixerConfig) {
 }
 
 #[repr(C)]
-pub struct Mixer {
-    mixer: *mut Arc<dyn mixer::Mixer>,
-}
+pub struct Mixer(*mut Arc<dyn mixer::Mixer>);
 
 #[no_mangle]
 pub fn mixer_new(mixer_config: *mut MixerConfig, mixer_name: *const c_char) -> *mut Mixer {
@@ -51,13 +46,11 @@ pub fn mixer_new(mixer_config: *mut MixerConfig, mixer_name: *const c_char) -> *
 
     unsafe {
         new_mixer = Box::into_raw(Box::new(
-            Mixer {
-                mixer: Box::into_raw(Box::new(
-                    mixer::find(Some(CStr::from_ptr(mixer_name).to_str().unwrap()))
-                        .expect("Failed to find mixer.")
-                        (*Box::from_raw((*mixer_config).mixer_config))
-                ))
-            }
+            Mixer(Box::into_raw(Box::new(
+                mixer::find(Some(
+                    CStr::from_ptr(mixer_name).to_str().unwrap()
+                )).expect("Failed to find mixer.")(*Box::from_raw((*mixer_config).0))
+            )))
         ));
     }
 
@@ -78,29 +71,25 @@ pub fn mixer_free(mixer: *mut Mixer) {
 #[no_mangle]
 pub fn mixer_get_volume(mixer: *mut Mixer) -> u16 {
     unsafe {
-        (*(*mixer).mixer).volume()
+        (*(*mixer).0).volume()
     }
 }
 
 #[repr(C)]
-pub struct PlayerConfig {
-    player_config: *mut config::PlayerConfig,
-}
+pub struct PlayerConfig(*mut config::PlayerConfig);
 
 pub fn player_config_box(player_config: *mut PlayerConfig) -> Box<config::PlayerConfig> {
     unsafe {
-        Box::from_raw((*player_config).player_config)
+        Box::from_raw((*player_config).0)
     }
 }
 
 #[no_mangle]
 pub fn player_config_default() -> *mut PlayerConfig {
     Box::into_raw(Box::new(
-        PlayerConfig {
-            player_config: Box::into_raw(Box::new(
-                config::PlayerConfig::default()
-            ))
-        }
+        PlayerConfig(Box::into_raw(Box::new(
+            config::PlayerConfig::default()
+        )))
     ))
 }
 
@@ -115,9 +104,7 @@ pub fn player_config_free(player_config: *mut PlayerConfig) {
 }
 
 #[repr(C)]
-pub struct Player {
-    player: *mut Arc<player::Player>,
-}
+pub struct Player(*mut Arc<player::Player>);
 
 #[no_mangle]
 pub fn player_new(player_config: *mut PlayerConfig, session: *mut Session, mixer: *mut Mixer, _audio_backend: *const c_char) -> *mut Player {
@@ -131,16 +118,14 @@ pub fn player_new(player_config: *mut PlayerConfig, session: *mut Session, mixer
 
     unsafe {
         new_player = Box::into_raw(Box::new(
-            Player {
-                player: Box::into_raw(Box::new(
-                    player::Player::new(
-                        *player_config_box(player_config),
-                        *session_box(session),
-                        (*(*mixer).mixer).get_soft_volume(),
-                        move || { sink_builder(None, config::AudioFormat::S16) }
-                    )
-                ))
-            }
+            Player(Box::into_raw(Box::new(
+                player::Player::new(
+                    *player_config_box(player_config),
+                    *session_box(session),
+                    (*(*mixer).0).get_soft_volume(),
+                    move || { sink_builder(None, config::AudioFormat::S16) }
+                )
+            )))
         ));
     }
 
@@ -162,7 +147,7 @@ pub fn player_free(player: *mut Player) {
 #[no_mangle]
 pub fn player_is_valid(player: *mut Player) -> u8 {
     unsafe {
-        !(*(*player).player).is_invalid() as u8
+        !(*(*player).0).is_invalid() as u8
     }
 }
 
@@ -175,7 +160,7 @@ pub fn player_load(player: *mut Player, spotify_uri: *const c_char, start_playin
                     eprintln!("Track is not playable.");
                 } else {
                     runtime().block_on(async {
-                        (*(*player).player).load(id, start_playing != 0, position_ms);
+                        (*(*player).0).load(id, start_playing != 0, position_ms);
                     });
                 }
             },
@@ -185,3 +170,21 @@ pub fn player_load(player: *mut Player, spotify_uri: *const c_char, start_playin
         }
     }
 }
+
+#[no_mangle]
+pub fn player_get_event_channel(player: *mut Player) -> *mut PlayerChannel {
+    unsafe {
+        Box::into_raw(Box::new(
+            PlayerChannel(Box::into_raw(Box::new(
+                (*(*player).0).get_player_event_channel()
+            )))
+        ))
+    }
+}
+
+#[repr(C)]
+pub struct PlayerChannel(*mut UnboundedReceiver<player::PlayerEvent>);
+
+
+#[repr(C)]
+pub struct PlayerEvent;
