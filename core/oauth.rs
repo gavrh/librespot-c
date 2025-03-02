@@ -40,9 +40,6 @@ pub fn oauth_builder_free(oauth_builder: *mut OAuthBuilder) {
 
 #[no_mangle]
 pub fn oauth_builder_custom_message(oauth_builder: *mut OAuthBuilder, message: *const c_char) {
-    if oauth_builder.is_null() {
-        return;
-    }
     unsafe {
         (*oauth_builder).message = CStr::from_ptr(message).to_str().unwrap().to_string();
     }
@@ -50,9 +47,6 @@ pub fn oauth_builder_custom_message(oauth_builder: *mut OAuthBuilder, message: *
 
 #[no_mangle]
 pub fn oauth_builder_auto_open(oauth_builder: *mut OAuthBuilder) {
-    if oauth_builder.is_null() {
-        return;
-    }
     unsafe {
         (*oauth_builder).auto_open = true;
     }
@@ -60,9 +54,6 @@ pub fn oauth_builder_auto_open(oauth_builder: *mut OAuthBuilder) {
 
 #[no_mangle]
 pub fn oauth_builder_add_scope(oauth_builder: *mut OAuthBuilder, scope: c_int) {
-    if oauth_builder.is_null() {
-        return;
-    }
     unsafe {
         match scope {
             1 => (*oauth_builder).scopes.push("app-remote-control".to_string()),
@@ -179,17 +170,13 @@ pub fn oauth_free(oauth: *mut OAuth) {
 #[no_mangle]
 pub fn oauth_access_token(oauth: *mut OAuth) -> *const c_char {
     unsafe {
-        let box_token = Box::from_raw((*oauth).token);
-        let cstring_access_token = CString::new(box_token.access_token).unwrap();
-        cstring_access_token.into_raw()
+        CString::new((*(*oauth).token).access_token.clone()).unwrap().into_raw()
     }
 }
 
 #[no_mangle]
 pub fn oauth_refresh_token(oauth: *mut OAuth) -> *const c_char {
     unsafe {
-        let box_token = Box::from_raw((*oauth).token);
-        let cstring_refresh_token = CString::new(box_token.refresh_token).unwrap();
-        cstring_refresh_token.into_raw()
+        CString::new((*(*oauth).token).refresh_token.clone()).unwrap().into_raw()
     }
 }

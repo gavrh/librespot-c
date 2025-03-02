@@ -23,9 +23,12 @@ extern void player_config_free(PlayerConfig* player_config);
 
 typedef struct Player Player;
 extern Player* player_new(PlayerConfig* player_config, Session* session, Mixer* mixer, const char* audio_backend);
-// extern void player_free(Player* player);
+extern void player_free(Player* player);
 extern bool player_is_valid(Player* player);
 extern void player_load(Player* player, const char* spotify_uri, bool start_playing, uint32_t position_ms);
+
+typedef struct PlayerChannel PlayerChannel;
+extern PlayerChannel* player_get_event_channel(Player* player);
 
 #ifdef __cplusplus
 }
