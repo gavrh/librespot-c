@@ -16,6 +16,7 @@ typedef struct Mixer Mixer;
 extern Mixer* mixer_new(MixerConfig* mixer_config, const char* mixer_name);
 extern void mixer_free(Mixer* mixer);
 extern uint16_t mixer_get_volume(Mixer* mixer);
+extern void mixer_set_volume(Mixer* mixer, uint16_t volume);
 
 typedef struct PlayerConfig PlayerConfig;
 extern PlayerConfig* player_config_default();

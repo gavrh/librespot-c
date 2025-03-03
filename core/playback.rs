@@ -75,6 +75,13 @@ pub fn mixer_get_volume(mixer: *mut Mixer) -> u16 {
     }
 }
 
+#[no_mangle]
+pub fn mixer_set_volume(mixer: *mut Mixer, volume: u16) {
+    unsafe {
+        (*(*mixer).0).set_volume(volume);
+    }
+}
+
 #[repr(C)]
 pub struct PlayerConfig(*mut config::PlayerConfig);
 
@@ -187,4 +194,5 @@ pub struct PlayerChannel(*mut UnboundedReceiver<player::PlayerEvent>);
 
 
 #[repr(C)]
+#[allow(dead_code)]
 pub struct PlayerEvent;
