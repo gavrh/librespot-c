@@ -1,9 +1,10 @@
 [package]
-name = "respot"
+name = "librespot"
 version = "0.1.0"
 edition = "2021"
 
 [lib]
+name = "librespot"
 path = "./lib.rs"
 crate-type = ["cdylib"]
 
