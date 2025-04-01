@@ -1,0 +1,11 @@
+@PACKAGE_INIT@
+
+include("${CMAKE_CURRENT_LIST_DIR}/librespotTargets.cmake")
+
+set(librespot_INCLUDE_DIRS "@LIBRESPOT_INCLUDE_DIRS@" CACHE STRING "Include directories for librespot")
+
+set(librespot_LIBRARIES "@LIBRESPOT_LIBRARIES@" CACHE STRING "Libraries for librespot")
+
+if(NOT TARGET librespot)
+  message(FATAL_ERROR "librespot was not found. Please ensure it is correctly installed.")
+endif()
