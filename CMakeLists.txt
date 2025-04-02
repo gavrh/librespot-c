@@ -35,7 +35,7 @@ set(RUST_LIB_PATH "${CMAKE_SOURCE_DIR}/core/target/release/${RUST_LIB_NAME}")
 add_custom_target(
     ${PROJECT_NAME}_rust
     COMMAND cargo build --release
-    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/core
+    WORKING_DIRECTORY ${${PROJECT_NAME}_SOURCE_DIR}/core
 )
 add_custom_command(
     TARGET ${PROJECT_NAME}_rust
