@@ -30,7 +30,7 @@ elseif(APPLE)
 else()
     set(RUST_LIB_NAME "librespot_core.so")
 endif()
-set(RUST_LIB_PATH "${CMAKE_SOURCE_DIR}/core/target/release/${RUST_LIB_NAME}")
+set(RUST_LIB_PATH "${${PROJECT_NAME}_SOURCE_DIR}/core/target/release/${RUST_LIB_NAME}")
 
 add_custom_target(
     ${PROJECT_NAME}_rust
