@@ -1,7 +1,6 @@
 #ifndef LIBRESPOT_PLAYBACK_H
 #define LIBRESPOT_PLAYBACK_H
 
-#include <cstdint>
 #include <librespot/core.h>
 #include <stdint.h>
 #include <stdbool.h>
