@@ -167,6 +167,7 @@ pub fn player_load(player: *mut Player, spotify_uri: *const c_char, start_playin
                     eprintln!("Track is not playable.");
                 } else {
                     runtime().block_on(async {
+                        println!("loading {:#?}", spotify_uri);
                         (*(*player).0).load(id, start_playing != 0, position_ms);
                     });
                 }
@@ -179,7 +180,31 @@ pub fn player_load(player: *mut Player, spotify_uri: *const c_char, start_playin
 }
 
 #[no_mangle]
-pub fn player_get_event_channel(player: *mut Player) -> *mut PlayerChannel {
+pub fn player_preload(player: *mut Player, spotify_uri: *const c_char) {
+    unsafe {
+        match core::SpotifyId::from_uri(CStr::from_ptr(spotify_uri).to_str().unwrap()) {
+            Ok(id) => {
+                if !id.is_playable() {
+                    eprintln!("Track is not playable.");
+                } else {
+                    runtime().block_on(async {
+                        println!("preloading {:#?}", spotify_uri);
+                        (*(*player).0).preload(id);
+                    });
+                }
+            },
+            Err(e) => {
+                eprintln!("Failed to load spotify uri: {}", e)
+            }
+        }
+    }
+}
+
+#[repr(C)]
+pub struct PlayerChannel(*mut UnboundedReceiver<player::PlayerEvent>);
+
+#[no_mangle]
+pub fn player_channel_get(player: *mut Player) -> *mut PlayerChannel {
     unsafe {
         Box::into_raw(Box::new(
             PlayerChannel(Box::into_raw(Box::new(
@@ -189,9 +214,39 @@ pub fn player_get_event_channel(player: *mut Player) -> *mut PlayerChannel {
     }
 }
 
-#[repr(C)]
-pub struct PlayerChannel(*mut UnboundedReceiver<player::PlayerEvent>);
+#[no_mangle]
+pub fn player_channel_free(player_channel: *mut PlayerChannel) {
+    if player_channel.is_null() {
+        return;
+    }
+    unsafe {
+        drop(Box::from_raw(player_channel));
+    }
+}
 
+#[no_mangle]
+pub fn player_channel_next(player_channel: *mut PlayerChannel) -> u8 {
+    unsafe {
+        match (*(*player_channel).0).try_recv() {
+            Ok(event) => {
+                match event {
+                    player::PlayerEvent::EndOfTrack {
+                        play_request_id: _,
+                        track_id: _
+                    } => {
+                        return true as u8;
+                    }
+                    _ => {}
+                }
+                println!("{:#?}", event);
+                return false as u8;
+            },
+            Err(_) => {
+                return false as u8;
+            }
+        }
+    }   
+}
 
 #[repr(C)]
 #[allow(dead_code)]
