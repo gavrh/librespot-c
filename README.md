@@ -5,7 +5,7 @@ C and C++ projects. This library enables easy access to
 Spotify’s streaming capabilities, including playback, authentication, and more.
 
 ## Requirements
-- [CMake 3.12 or higher](https://cmake.org/download/)
+- [CMake](https://cmake.org/download/) 3.12 or higher
 - [Rust & Cargo](https://doc.rust-lang.org/cargo/getting-started/installation.html)
 - A C/C++ compiler (e.g., [GCC](https://gcc.gnu.org/install/) or [Clang](https://releases.llvm.org/download.html))
 
