@@ -49,13 +49,19 @@ typedef struct PlayerEventLoading PlayerEventLoading;
 extern PlayerEventLoading* player_event_loading_new(PlayerEvent* player_event);
 extern void player_event_loading_free(PlayerEventLoading* player_event);
 extern uint64_t player_event_loading_play_request_id(PlayerEventLoading* player_event);
-extern uint64_t player_event_loading_play_request_id(PlayerEventLoading* player_event);
+// extern uint64_t player_event_loading_track_id(PlayerEventLoading* player_event);
 extern uint32_t player_event_loading_position_ms(PlayerEventLoading* player_event);
 
 typedef struct PlayerEventPreloading PlayerEventPreloading;
 typedef struct PlayerEventPlaying PlayerEventPlaying;
 typedef struct PlayerEventPaused PlayerEventPaused;
+
 typedef struct PlayerEventTimeToPreloadNextTrack PlayerEventTimeToPreloadNextTrack;
+extern PlayerEventTimeToPreloadNextTrack* player_event_time_to_preload_next_track_new(PlayerEvent* player_event);
+extern void player_event_time_to_preload_next_track_free(PlayerEventTimeToPreloadNextTrack* player_event);
+extern uint64_t player_event_time_to_preload_next_track_play_request_id(PlayerEventTimeToPreloadNextTrack* player_event);
+extern uint64_t player_event_time_to_preload_next_track_track_id(PlayerEventTimeToPreloadNextTrack* player_event);
+
 typedef struct PlayerEventEndOfTrack PlayerEventEndOfTrack;
 typedef struct PlayerEventUnavailble PlayerEventUnavailable;
 typedef struct PlayerEventVolumeChanged PlayerEventVolumeChanged;
