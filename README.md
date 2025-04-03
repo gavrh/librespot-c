@@ -10,18 +10,80 @@ Spotify’s streaming capabilities, including playback, authentication, and more
 - A C/C++ compiler (e.g., [GCC](https://gcc.gnu.org/install/) or [Clang](https://releases.llvm.org/download.html))
 
 ## Installation
-coming soon...
+```sh
+# clone library
+git clone https://github.com/gavrh/librespot-c.git
+cd librespot-c
+
+# create make files
+mkdir build
+cd build
+cmake ..
+
+# install locally
+make
+# install globally
+sudo make install
+```
+
+#### Copy and Paste
+> Local Install
+> ```sh
+> git clone https:://github.com/gavrh/librspot-c.git && cd librespot-c && mkdir build && cd build && cmake .. && > > make
+> ```
+> Global Install
+> ```sh
+> git clone https:://github.com/gavrh/librspot-c.git && cd librespot-c && mkdir build && cd build && cmake .. && > > sudo make install
+> ```
+
+## Get Started
+```c
+#include <librespot/oauth.h>
+#include <librespot/core.h>
+#include <librespot/discovery.h>
+#include <librespot/playback.h>
+#include <stdbool.h>
+
+int main() {
+
+    // authenticate with spotify
+    OAuthBuilder* oauth = oauth_builder_new("SPOTIFY_API_CLIENT_ID", "REDIRECT_URI");
+    oauth_builder_auto_open(oauth);
+    // make sure you're api client is allowed the scopes you add
+    oauth_builder_add_scope(oauth, OAUTH_SCOPE_ALL);
+    OAuth* auth = oauth_build(oauth);
+
+    // create credentials and session, then connect
+    const char* access = oauth_access_token(auth);
+    Credentials* creds = credentials_new(access);
+    Session* session = session_new(session_config_default());
+    session_connect(session, creds);
+
+    // create mixer and player
+    Mixer* mixer = mixer_new(mixer_config_default(), "MIXER");
+    Player* player = player_new(player_config_default(), session, mixer, "BACKEND");
+
+    // play song
+    player_load(player, "spotify:track:<TRACK_ID>", true, 0);
+
+    while (true) {
+        // coming soon...
+    }
+
+    return 0;
+}
+```
 
 ## Contributing
-We welcome contributions! If you have suggestions or improvements, feel free to fork the repository, create a pull request, or open an issue.
+Contributions are welcome! If you have suggestions or improvements, feel free to fork the repository, create a pull request, or open an issue.
 
 1. Fork the repository.
 
-2. Create a new branch (`git checkout -b feature-name`).
+2. Create a new branch (`git checkout -b <feature-name>`).
 
 3. Commit your changes (`git commit -am 'Add new feature'`).
 
-4. Push to the branch (`git push origin feature-name`.
+4. Push to the branch (`git push origin <feature-name>`.
 
 5. Open a pull request.
 
