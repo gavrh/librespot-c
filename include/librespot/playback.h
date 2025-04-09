@@ -30,11 +30,6 @@ extern bool player_is_valid(Player* player);
 extern void player_load(Player* player, const char* spotify_uri, bool start_playing, uint32_t position_ms);
 extern void player_preload(Player* player, const char* spotify_uri);
 
-typedef struct PlayerChannel PlayerChannel;
-extern PlayerChannel* player_channel_get(Player* player);
-extern void player_channel_free(PlayerChannel* player_channel);
-extern bool player_channel_next(PlayerChannel* player_channel);
-
 typedef enum {
     PLAYER_EVENT_NONE,
     PLAYER_EVENT_PLAY_REQUEST_ID_CHANGED,
@@ -64,7 +59,10 @@ typedef struct {} PlayerEventPreloading;
 typedef struct {} PlayerEventPlaying;
 typedef struct {} PlayerEventPaused;
 typedef struct {} PlayerEventTimeToPreloadNextTrack;
-typedef struct {} PlayerEventEndOfTrack;
+typedef struct {
+    uint64_t play_request_id;
+    const char* track_id;
+} PlayerEventEndOfTrack;
 typedef struct {} PlayerEventUnavailable;
 typedef struct {} PlayerEventVolumeChanged;
 typedef struct {} PlayerEventPositionCorrection;
@@ -98,9 +96,17 @@ typedef union {
 } PlayerEventData;
 
 typedef struct {
-    PlayerEventType type;
+    PlayerEventType event;
     PlayerEventData data;
 } PlayerEvent;
+extern PlayerEvent* player_event_new();
+extern void player_event_free(PlayerEvent* player_event);
+
+typedef struct PlayerChannel PlayerChannel;
+extern PlayerChannel* player_channel_get(Player* player);
+extern void player_channel_free(PlayerChannel* player_channel);
+extern bool player_channel_poll(PlayerChannel* player_channel, PlayerEvent* player_event);
+
 
 #ifdef __cplusplus
 }

@@ -8,7 +8,7 @@ use librespot::{
     }
 };
 use tokio::sync::mpsc::UnboundedReceiver;
-use std::ffi::{c_char, c_uchar, CStr};
+use std::ffi::{c_char, c_uchar, CStr, CString};
 use std::sync::Arc;
 
 use crate::core::{Session, session_box, session_free};
@@ -225,24 +225,32 @@ pub fn player_channel_free(player_channel: *mut PlayerChannel) {
 }
 
 #[no_mangle]
-pub fn player_channel_next(player_channel: *mut PlayerChannel) -> u8 {
+pub fn player_channel_poll(player_channel: *mut PlayerChannel, player_event: *mut PlayerEvent) -> u8 {
     unsafe {
         match (*(*player_channel).0).try_recv() {
             Ok(event) => {
+                println!("{:#?}", event);
                 match event {
                     player::PlayerEvent::EndOfTrack {
-                        play_request_id: _,
-                        track_id: _
+                        play_request_id,
+                        track_id
                     } => {
+                        (*player_event).event = PlayerEventType::PLAYER_EVENT_END_OF_TRACK;
+                        let c_track_id = CString::new(track_id.to_uri().unwrap()).unwrap();
+                        (*player_event).data.end_of_track = PlayerEventEndOfTrack {
+                            play_request_id, 
+                            track_id: c_track_id.as_ptr()
+                        };
+                        std::mem::forget(c_track_id);
                         return true as u8;
                     }
                     player::PlayerEvent::TimeToPreloadNextTrack { play_request_id: _, track_id: _ } => {
                         return true as u8;
                     }
-                    _ => {}
+                    _ => {
+                        return false as u8;
+                    }
                 }
-                println!("{:#?}", event);
-                return false as u8;
             },
             Err(_) => {
                 return false as u8;
@@ -252,5 +260,75 @@ pub fn player_channel_next(player_channel: *mut PlayerChannel) -> u8 {
 }
 
 #[repr(C)]
-#[allow(dead_code)]
-pub struct PlayerEvent;
+#[derive(Clone, Copy)]
+pub struct PlayerEventPlaying {
+    pub track_id: *const c_char
+}
+
+#[repr(C)]
+#[derive(Clone, Copy)]
+pub struct PlayerEventEndOfTrack {
+    pub play_request_id: u64,
+    pub track_id: *const c_char
+}
+
+#[repr(C)]
+pub union PlayerEventData {
+    pub playing: PlayerEventPlaying,
+    pub end_of_track: PlayerEventEndOfTrack
+}
+
+#[repr(C)]
+pub enum PlayerEventType {
+    PLAYER_EVENT_NONE,
+    PLAYER_EVENT_PLAYER_REQUEST_ID_CHANGED,
+    PLAYER_EVENT_STOPPED,
+    PLAYER_EVENT_LOADING,
+    PLAYER_EVENT_PRELOADING,
+    PLAYER_EVENT_PLAYING,
+    PLAYER_EVENT_PAUSED,
+    PLAYER_EVENT_TIME_TO_PRELOAD_NEXT_TRACK,
+    PLAYER_EVENT_END_OF_TRACK,
+    PLAYER_EVENT_UNAVAILABLE,
+    PLAYER_EVENT_VOLUME_CHANGED,
+    PLAYER_EVENT_POSITION_CORRECTION,
+    PLAYER_EVENT_SEEKED,
+    PLAYER_EVENT_TRACK_CHANGED,
+    PLAYER_EVENT_SESSION_CONNECTED,
+    PLAYER_EVENT_SESSION_DISCONNECTED,
+    PLAYER_EVENT_SESSION_CLIENT_CHANGED,
+    PLAYER_EVENT_SHUFFLE_CHANGED,
+    PLAYER_EVENT_REPEAT_CHANGED
+}
+
+#[repr(C)]
+pub struct PlayerEvent {
+    pub event: PlayerEventType,
+    pub data: PlayerEventData
+}
+
+#[no_mangle]
+pub fn player_event_new() -> *mut PlayerEvent {
+    let new_player_event: *mut PlayerEvent;
+
+    unsafe {
+        new_player_event = Box::into_raw(Box::new(
+            PlayerEvent {
+                event: PlayerEventType::PLAYER_EVENT_NONE,
+                data: std::mem::zeroed()
+            }
+        ));
+    }
+
+    return new_player_event;
+}
+
+#[no_mangle]
+pub fn player_event_free(player_event: *mut PlayerEvent) {
+    if player_event.is_null() {
+        return;
+    }
+    unsafe {
+        drop(Box::from_raw(player_event));
+    }
+}
