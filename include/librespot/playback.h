@@ -35,47 +35,72 @@ extern PlayerChannel* player_channel_get(Player* player);
 extern void player_channel_free(PlayerChannel* player_channel);
 extern bool player_channel_next(PlayerChannel* player_channel);
 
-typedef struct PlayerEvent PlayerEvent;
+typedef enum {
+    PLAYER_EVENT_NONE,
+    PLAYER_EVENT_PLAY_REQUEST_ID_CHANGED,
+    PLAYER_EVENT_STOPPED,
+    PLAYER_EVENT_LOADING,
+    PLAYER_EVENT_PRELOADING,
+    PLAYER_EVENT_PLAYING,
+    PLAYER_EVENT_PAUSED,
+    PLAYER_EVENT_TIME_TO_PRELOAD_NEXT_TRACK,
+    PLAYER_EVENT_END_OF_TRACK,
+    PLAYER_EVENT_UNAVAILABLE,
+    PLAYER_EVENT_VOLUME_CHANGED,
+    PLAYER_EVENT_POSITION_CORRECTION,
+    PLAYER_EVENT_SEEKED,
+    PLAYER_EVENT_TRACK_CHANGED,
+    PLAYER_EVENT_SESSION_CONNECTED,
+    PLAYER_EVENT_SESSION_DISCONNECTED,
+    PLAYER_EVENT_SESSION_CLIENT_CHANGED,
+    PLAYER_EVENT_SHUFFLE_CHANGED,
+    PLAYER_EVENT_REPEAT_CHANGED
+} PlayerEventType;
 
-typedef struct PlayerEventPlayRequestIdChanged PlayerEventPlayRequestIdChanged;
-extern PlayerEventPlayRequestIdChanged* player_event_play_request_id_changed_new(PlayerEvent* player_event);
-extern void player_event_play_request_id_changed_free(PlayerEventPlayRequestIdChanged* player_event);
-extern uint64_t player_event_play_request_id_changed_play_request_id(PlayerEventPlayRequestIdChanged* player_event);
+typedef struct {} PlayerEventPlayRequestIdChanged;
+typedef struct {} PlayerEventStopped;
+typedef struct {} PlayerEventLoading;
+typedef struct {} PlayerEventPreloading;
+typedef struct {} PlayerEventPlaying;
+typedef struct {} PlayerEventPaused;
+typedef struct {} PlayerEventTimeToPreloadNextTrack;
+typedef struct {} PlayerEventEndOfTrack;
+typedef struct {} PlayerEventUnavailable;
+typedef struct {} PlayerEventVolumeChanged;
+typedef struct {} PlayerEventPositionCorrection;
+typedef struct {} PlayerEventSeeked;
+typedef struct {} PlayerEventTrackChanged;
+typedef struct {} PlayerEventSessionConnected;
+typedef struct {} PlayerEventSessionDisconnected;
+typedef struct {} PlayerEventSessionClientChanged;
+typedef struct {} PlayerEventShuffleChanged;
+typedef struct {} PlayerEventRepeatChanged;
 
-typedef struct PlayerEventStopped PlayerEventStopped;
+typedef union {
+    PlayerEventPlayRequestIdChanged play_request_id_changed;
+    PlayerEventStopped stopped;
+    PlayerEventLoading loading;
+    PlayerEventPreloading preloading;
+    PlayerEventPlaying playing;
+    PlayerEventPaused paused;
+    PlayerEventTimeToPreloadNextTrack time_to_preload_next_track;
+    PlayerEventEndOfTrack end_of_track;
+    PlayerEventUnavailable unavailable;
+    PlayerEventVolumeChanged volume_changed;
+    PlayerEventPositionCorrection position_correction;
+    PlayerEventSeeked seeked;
+    PlayerEventTrackChanged track_changed;
+    PlayerEventSessionConnected session_connected;
+    PlayerEventSessionDisconnected session_disconnected;
+    PlayerEventSessionClientChanged session_client_changed;
+    PlayerEventShuffleChanged shuffle_changed;
+    PlayerEventRepeatChanged repeat_changed;
+} PlayerEventData;
 
-typedef struct PlayerEventLoading PlayerEventLoading;
-extern PlayerEventLoading* player_event_loading_new(PlayerEvent* player_event);
-extern void player_event_loading_free(PlayerEventLoading* player_event);
-extern uint64_t player_event_loading_play_request_id(PlayerEventLoading* player_event);
-// extern uint64_t player_event_loading_track_id(PlayerEventLoading* player_event);
-extern uint32_t player_event_loading_position_ms(PlayerEventLoading* player_event);
-
-typedef struct PlayerEventPreloading PlayerEventPreloading;
-typedef struct PlayerEventPlaying PlayerEventPlaying;
-typedef struct PlayerEventPaused PlayerEventPaused;
-
-typedef struct PlayerEventTimeToPreloadNextTrack PlayerEventTimeToPreloadNextTrack;
-extern PlayerEventTimeToPreloadNextTrack* player_event_time_to_preload_next_track_new(PlayerEvent* player_event);
-extern void player_event_time_to_preload_next_track_free(PlayerEventTimeToPreloadNextTrack* player_event);
-extern uint64_t player_event_time_to_preload_next_track_play_request_id(PlayerEventTimeToPreloadNextTrack* player_event);
-extern uint64_t player_event_time_to_preload_next_track_track_id(PlayerEventTimeToPreloadNextTrack* player_event);
-
-typedef struct PlayerEventEndOfTrack PlayerEventEndOfTrack;
-typedef struct PlayerEventUnavailble PlayerEventUnavailable;
-typedef struct PlayerEventVolumeChanged PlayerEventVolumeChanged;
-typedef struct PlayerEventPositionCorrection PlayerEventPositionCorrection;
-typedef struct PlayerEventSeeked PlayerEventSeeked;
-
-typedef struct PlayerEventTrackChanged PlayerEventTrackChanged;
-extern PlayerEventTrackChanged* player_event_track_changed_new(PlayerEvent* player_event);
-extern void player_event_track_changed_free(PlayerEventTrackChanged* player_event);
-
-typedef struct PlayerEventSessionConnected PlayerEventSessionConnected;
-typedef struct PlayerEventSessionDisconnected PlayerEventSessionDisconnected;
-typedef struct PlayerEventSessionClientChanged PlayerEventSessionClientChanged;
-typedef struct PlayerEventShuffleChanged PlayerEventShuffleChanged;
-typedef struct PlayerEventRepeatChanged PlayerEventRepeatChanged;
+typedef struct {
+    PlayerEventType type;
+    PlayerEventData data;
+} PlayerEvent;
 
 #ifdef __cplusplus
 }
