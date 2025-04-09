@@ -236,6 +236,9 @@ pub fn player_channel_next(player_channel: *mut PlayerChannel) -> u8 {
                     } => {
                         return true as u8;
                     }
+                    player::PlayerEvent::TimeToPreloadNextTrack { play_request_id: _, track_id: _ } => {
+                        return true as u8;
+                    }
                     _ => {}
                 }
                 println!("{:#?}", event);
