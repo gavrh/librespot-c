@@ -52,26 +52,78 @@ typedef enum {
     PLAYER_EVENT_REPEAT_CHANGED
 } PlayerEventType;
 
-typedef struct {} PlayerEventPlayRequestIdChanged;
-typedef struct {} PlayerEventStopped;
-typedef struct {} PlayerEventLoading;
-typedef struct {} PlayerEventPreloading;
-typedef struct {} PlayerEventPlaying;
-typedef struct {} PlayerEventPaused;
-typedef struct {} PlayerEventTimeToPreloadNextTrack;
+typedef struct {
+    uint64_t play_request_id;
+} PlayerEventPlayRequestIdChanged;
+
+typedef struct {
+    uint64_t play_request_id;
+    const char* track_id;
+} PlayerEventStopped;
+
+typedef struct {
+    uint64_t play_request_id;
+    const char* track_id;
+    uint32_t position_ms;
+} PlayerEventLoading;
+
+typedef struct {
+    const char* track_id;
+} PlayerEventPreloading;
+
+typedef struct {
+    uint64_t play_request_id;
+    const char* track_id;
+    uint32_t position_ms;
+} PlayerEventPlaying;
+
+typedef struct {
+    uint64_t play_request_id;
+    const char* track_id;
+    uint32_t position_ms;
+} PlayerEventPaused;
+
+typedef struct {
+    uint64_t play_request_id;
+    const char* track_id;
+} PlayerEventTimeToPreloadNextTrack;
+
 typedef struct {
     uint64_t play_request_id;
     const char* track_id;
 } PlayerEventEndOfTrack;
-typedef struct {} PlayerEventUnavailable;
-typedef struct {} PlayerEventVolumeChanged;
-typedef struct {} PlayerEventPositionCorrection;
-typedef struct {} PlayerEventSeeked;
+
+typedef struct {
+    uint64_t play_request_id;
+    const char* track_id;
+} PlayerEventUnavailable;
+
+typedef struct {
+    uint16_t volume;
+} PlayerEventVolumeChanged;
+
+typedef struct {
+    uint64_t play_request_id;
+    const char* track_id;
+    uint32_t position_ms;
+} PlayerEventPositionCorrection;
+
+typedef struct {
+    uint64_t play_request_id;
+    const char* track_id;
+    uint32_t position_ms;
+} PlayerEventSeeked;
+
 typedef struct {} PlayerEventTrackChanged;
+
 typedef struct {} PlayerEventSessionConnected;
+
 typedef struct {} PlayerEventSessionDisconnected;
+
 typedef struct {} PlayerEventSessionClientChanged;
+
 typedef struct {} PlayerEventShuffleChanged;
+
 typedef struct {} PlayerEventRepeatChanged;
 
 typedef union {
