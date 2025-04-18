@@ -278,6 +278,34 @@ pub fn player_channel_poll(player_channel: *mut PlayerChannel, player_event: *mu
                         return true as u8;
                     }
 
+                    player::PlayerEvent::Playing {
+                        play_request_id,
+                        track_id,
+                        position_ms
+                    } => {
+                        (*player_event).event = PlayerEventType::PLAYER_EVENT_PLAYING;
+                        (*player_event).data.playing = PlayerEventPlaying {
+                            play_request_id,
+                            track_id: spotify_id_new_internal(track_id),
+                            position_ms
+                        };
+                        return true as u8;
+                    }
+
+                    player::PlayerEvent::Paused {
+                        play_request_id,
+                        track_id,
+                        position_ms
+                    } => {
+                        (*player_event).event = PlayerEventType::PLAYER_EVENT_PAUSED;
+                        (*player_event).data.paused = PlayerEventPaused {
+                            play_request_id,
+                            track_id: spotify_id_new_internal(track_id),
+                            position_ms
+                        };
+                        return true as u8;
+                    }
+
                     player::PlayerEvent::EndOfTrack {
                         play_request_id,
                         track_id
