@@ -76,3 +76,27 @@ pub fn session_connect(session: *mut Session, credentials: *mut Credentials) {
         credentials_free(credentials);
     }
 }
+
+#[repr(C)]
+pub struct SpotifyId(*mut core::SpotifyId);
+
+pub fn spotify_id_new_internal(spotify_id: core::SpotifyId) -> *mut SpotifyId {
+    Box::into_raw(Box::new(
+        SpotifyId(Box::into_raw(Box::new(
+            spotify_id
+        )))
+    ))
+}
+
+#[no_mangle]
+pub fn spotify_id_new() {}
+
+#[no_mangle]
+pub fn spotify_id_free(spotify_id: *mut SpotifyId) {
+    if spotify_id.is_null() {
+        return;
+    }
+    unsafe {
+        drop(Box::from_raw(spotify_id));
+    }
+}
