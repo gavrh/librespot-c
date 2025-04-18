@@ -11,7 +11,7 @@ use tokio::sync::mpsc::UnboundedReceiver;
 use std::ffi::{c_char, c_uchar, CStr, CString};
 use std::sync::Arc;
 
-use crate::core::{Session, session_box, session_free};
+use crate::core::{session_box, session_free, spotify_id_new_internal, Session, SpotifyId};
 use crate::runtime::runtime;
 
 #[repr(C)]
@@ -231,28 +231,84 @@ pub fn player_channel_poll(player_channel: *mut PlayerChannel, player_event: *mu
             Ok(event) => {
                 println!("{:#?}", event);
                 match event {
+
+                    player::PlayerEvent::PlayRequestIdChanged {
+                        play_request_id
+                    } => {
+                        (*player_event).event = PlayerEventType::PLAYER_EVENT_PLAYER_REQUEST_ID_CHANGED;
+                        (*player_event).data.play_request_id_changed = PlayerEventPlayRequestIdChanged {
+                            play_request_id
+                        };
+                        return true as u8;
+                    }
+
+                    player::PlayerEvent::Stopped {
+                        play_request_id,
+                        track_id
+                    } => {
+                        (*player_event).event = PlayerEventType::PLAYER_EVENT_STOPPED;
+                        (*player_event).data.stopped = PlayerEventStopped {
+                            play_request_id,
+                            track_id: spotify_id_new_internal(track_id)
+                        };
+                        return true as u8;
+                    }
+
+                    player::PlayerEvent::Loading {
+                        play_request_id,
+                        track_id,
+                        position_ms
+                    } => {
+                        (*player_event).event = PlayerEventType::PLAYER_EVENT_LOADING;
+                        (*player_event).data.loading = PlayerEventLoading {
+                            play_request_id,
+                            track_id: spotify_id_new_internal(track_id),
+                            position_ms
+                        };
+                        return true as u8;
+                    }
+
+                    player::PlayerEvent::Preloading {
+                        track_id
+                    } => {
+                        (*player_event).event = PlayerEventType::PLAYER_EVENT_PRELOADING;
+                        (*player_event).data.preloading = PlayerEventPreloading {
+                            track_id: spotify_id_new_internal(track_id)
+                        };
+                        return true as u8;
+                    }
+
                     player::PlayerEvent::EndOfTrack {
                         play_request_id,
                         track_id
                     } => {
                         (*player_event).event = PlayerEventType::PLAYER_EVENT_END_OF_TRACK;
-                        let c_track_id = CString::new(track_id.to_uri().unwrap()).unwrap();
                         (*player_event).data.end_of_track = PlayerEventEndOfTrack {
                             play_request_id, 
-                            track_id: c_track_id.as_ptr()
+                            track_id: spotify_id_new_internal(track_id)
                         };
-                        std::mem::forget(c_track_id);
                         return true as u8;
                     }
-                    player::PlayerEvent::TimeToPreloadNextTrack { play_request_id: _, track_id: _ } => {
+
+                    player::PlayerEvent::TimeToPreloadNextTrack {
+                        play_request_id,
+                        track_id
+                    } => {
+                        (*player_event).event = PlayerEventType::PLAYER_EVENT_TIME_TO_PRELOAD_NEXT_TRACK;
+                        (*player_event).data.time_to_preload_next_track = PlayerEventTimeToPreloadNextTrack {
+                            play_request_id, 
+                            track_id: spotify_id_new_internal(track_id)
+                        };
                         return true as u8;
                     }
+
                     _ => {
                         return false as u8;
                     }
                 }
             },
             Err(_) => {
+                (*player_event).event = PlayerEventType::PLAYER_EVENT_NONE;
                 return false as u8;
             }
         }
@@ -261,21 +317,104 @@ pub fn player_channel_poll(player_channel: *mut PlayerChannel, player_event: *mu
 
 #[repr(C)]
 #[derive(Clone, Copy)]
+pub struct PlayerEventPlayRequestIdChanged {
+    pub play_request_id: u64
+}
+
+#[repr(C)]
+#[derive(Clone, Copy)]
+pub struct PlayerEventStopped {
+    pub play_request_id: u64,
+    pub track_id: *mut SpotifyId
+}
+
+#[repr(C)]
+#[derive(Clone, Copy)]
+pub struct PlayerEventLoading {
+    pub play_request_id: u64,
+    pub track_id: *mut SpotifyId,
+    pub position_ms: u32
+}
+
+#[repr(C)]
+#[derive(Clone, Copy)]
+pub struct PlayerEventPreloading {
+    pub track_id: *mut SpotifyId
+}
+
+#[repr(C)]
+#[derive(Clone, Copy)]
 pub struct PlayerEventPlaying {
-    pub track_id: *const c_char
+    pub play_request_id: u64,
+    pub track_id: *mut SpotifyId,
+    pub position_ms: u32
+}
+
+#[repr(C)]
+#[derive(Clone, Copy)]
+pub struct PlayerEventPaused {
+    pub play_request_id: u64,
+    pub track_id: *mut SpotifyId,
+    pub position_ms: u32
+}
+
+#[repr(C)]
+#[derive(Clone, Copy)]
+pub struct PlayerEventTimeToPreloadNextTrack {
+    pub play_request_id: u64,
+    pub track_id: *mut SpotifyId
 }
 
 #[repr(C)]
 #[derive(Clone, Copy)]
 pub struct PlayerEventEndOfTrack {
     pub play_request_id: u64,
-    pub track_id: *const c_char
+    pub track_id: *mut SpotifyId
+}
+
+#[repr(C)]
+#[derive(Clone, Copy)]
+pub struct PlayerEventUnavailable {
+    pub play_request_id: u64,
+    pub track_id: *mut SpotifyId
+}
+
+#[repr(C)]
+#[derive(Clone, Copy)]
+pub struct PlayerEventVolumeChanged {
+    pub volume: u64
+}
+
+#[repr(C)]
+#[derive(Clone, Copy)]
+pub struct PlayerEventPositionCorrection {
+    pub play_request_id: u64,
+    pub track_id: *mut SpotifyId,
+    pub position_ms: u32
+}
+
+#[repr(C)]
+#[derive(Clone, Copy)]
+pub struct PlayerEventSeeked {
+    pub play_request_id: u64,
+    pub track_id: *mut SpotifyId,
+    pub position_ms: u32
 }
 
 #[repr(C)]
 pub union PlayerEventData {
+    pub play_request_id_changed: PlayerEventPlayRequestIdChanged,
+    pub stopped: PlayerEventStopped,
+    pub loading: PlayerEventLoading,
+    pub preloading: PlayerEventPreloading,
     pub playing: PlayerEventPlaying,
-    pub end_of_track: PlayerEventEndOfTrack
+    pub paused: PlayerEventPaused,
+    pub time_to_preload_next_track: PlayerEventTimeToPreloadNextTrack,
+    pub end_of_track: PlayerEventEndOfTrack,
+    pub unavailable: PlayerEventUnavailable,
+    pub volume_changed: PlayerEventVolumeChanged,
+    pub positon_correction: PlayerEventPositionCorrection,
+    pub seeked: PlayerEventSeeked
 }
 
 #[repr(C)]
