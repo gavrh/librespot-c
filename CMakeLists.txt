@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.12)
 
 project(librespot VERSION 1.0.0 LANGUAGES C)
 
-set(CMAKE_C_STANDARD 17)
+set(CMAKE_C_STANDARD 99)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 set(CMAKE_C_EXTENSIONS OFF)
 set(CMAKE_STATIC_LIBRARY_PREFIX "")
@@ -32,6 +32,9 @@ else()
 endif()
 set(RUST_LIB_PATH "${${PROJECT_NAME}_SOURCE_DIR}/core/target/release/${RUST_LIB_NAME}")
 
+# non local lib dir
+set(CMAKE_INSTALL_LIBDIR "/usr/lib")
+
 add_custom_target(
     ${PROJECT_NAME}_rust
     COMMAND cargo build --release
@@ -52,7 +55,7 @@ target_link_libraries(${PROJECT_NAME} PRIVATE ${CMAKE_BINARY_DIR}/lib/${RUST_LIB
 install(
     TARGETS ${PROJECT_NAME}
     EXPORT ${PROJECT_NAME}Targets
-    LIBRARY DESTINATION lib
+    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
     PUBLIC_HEADER DESTINATION include
 )
 
@@ -64,7 +67,7 @@ install(
 install(
     EXPORT ${PROJECT_NAME}Targets
     FILE ${PROJECT_NAME}Targets.cmake
-    DESTINATION lib/cmake/${PROJECT_NAME}
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/${PROJECT_NAME}
 )
 
 configure_file(
@@ -75,11 +78,11 @@ configure_file(
 
 install(
     FILES ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}Config.cmake
-    DESTINATION lib/cmake/${PROJECT_NAME}
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/${PROJECT_NAME}
 )
 
 # install rust core lib
 install(
     FILES ${CMAKE_BINARY_DIR}/lib/${RUST_LIB_NAME}
-    DESTINATION lib
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}
 )
