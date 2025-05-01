@@ -8,7 +8,7 @@ use librespot::{
     }
 };
 use tokio::sync::mpsc::UnboundedReceiver;
-use std::ffi::{c_char, c_uchar, CStr, CString};
+use std::ffi::{c_char, c_uchar, CStr};
 use std::sync::Arc;
 
 use crate::core::{session_box, session_free, spotify_id_new_internal, Session, SpotifyId};

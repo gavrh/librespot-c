@@ -17,7 +17,7 @@ extern void session_free(Session* session);
 extern void session_connect(Session* session, Credentials* credentials);
 
 typedef struct SpotifyId SpotifyId;
-extern void spotify_if_free(SpotifyId* spotify_id);
+extern void spotify_id_free(SpotifyId* spotify_id);
 
 #ifdef __cplusplus
 }
