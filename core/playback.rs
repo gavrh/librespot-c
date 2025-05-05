@@ -10,6 +10,7 @@ use librespot::{
 use tokio::sync::mpsc::UnboundedReceiver;
 use std::ffi::{c_char, c_uchar, CStr};
 use std::sync::Arc;
+use std::time::Duration;
 
 use crate::core::{session_box, session_free, spotify_id_new_internal, Session, SpotifyId};
 use crate::runtime::runtime;
@@ -95,7 +96,21 @@ pub fn player_config_box(player_config: *mut PlayerConfig) -> Box<config::Player
 pub fn player_config_default() -> *mut PlayerConfig {
     Box::into_raw(Box::new(
         PlayerConfig(Box::into_raw(Box::new(
-            config::PlayerConfig::default()
+            config::PlayerConfig {
+                bitrate: config::Bitrate::default(),
+                gapless: true,
+                normalisation: true,
+                normalisation_type: config::NormalisationType::default(),
+                normalisation_method: config::NormalisationMethod::default(),
+                normalisation_pregain_db: 0.0,
+                normalisation_threshold_dbfs: -2.0,
+                normalisation_attack_cf: 0.005,
+                normalisation_release_cf: 0.1,
+                normalisation_knee_db: 5.0,
+                passthrough: false,
+                ditherer: Some(config::mk_ditherer::<config::TriangularDitherer>),
+                position_update_interval: Some(Duration::from_millis(500))
+            }
         )))
     ))
 }
@@ -137,7 +152,6 @@ pub fn player_new(player_config: *mut PlayerConfig, session: *mut Session, mixer
     }
 
     player_config_free(player_config);
-    session_free(session);
     return new_player;
 }
 
@@ -197,6 +211,27 @@ pub fn player_preload(player: *mut Player, spotify_uri: *const c_char) {
                 eprintln!("Failed to load spotify uri: {}", e)
             }
         }
+    }
+}
+
+#[no_mangle]
+pub fn player_play(player: *mut Player) {
+    unsafe {
+        (*(*player).0).play();
+    }
+}
+
+#[no_mangle]
+pub fn player_pause(player: *mut Player) {
+    unsafe {
+        (*(*player).0).pause();
+    }
+}
+
+#[no_mangle]
+pub fn player_seek(player: *mut Player, position_ms: u32) {
+    unsafe {
+        (*(*player).0).seek(position_ms);
     }
 }
 
@@ -423,6 +458,14 @@ pub struct PlayerEventPositionCorrection {
 
 #[repr(C)]
 #[derive(Clone, Copy)]
+pub struct PlayerEventPositionChanged {
+    pub play_request_id: u64,
+    pub track_id: *mut SpotifyId,
+    pub position_ms: u32
+}
+
+#[repr(C)]
+#[derive(Clone, Copy)]
 pub struct PlayerEventSeeked {
     pub play_request_id: u64,
     pub track_id: *mut SpotifyId,
@@ -442,10 +485,12 @@ pub union PlayerEventData {
     pub unavailable: PlayerEventUnavailable,
     pub volume_changed: PlayerEventVolumeChanged,
     pub positon_correction: PlayerEventPositionCorrection,
+    pub positon_changed: PlayerEventPositionChanged,
     pub seeked: PlayerEventSeeked
 }
 
 #[repr(C)]
+#[allow(non_camel_case_types)]
 pub enum PlayerEventType {
     PLAYER_EVENT_NONE,
     PLAYER_EVENT_PLAYER_REQUEST_ID_CHANGED,
@@ -459,6 +504,7 @@ pub enum PlayerEventType {
     PLAYER_EVENT_UNAVAILABLE,
     PLAYER_EVENT_VOLUME_CHANGED,
     PLAYER_EVENT_POSITION_CORRECTION,
+    PLAYER_EVENT_POSITION_CHANGED,
     PLAYER_EVENT_SEEKED,
     PLAYER_EVENT_TRACK_CHANGED,
     PLAYER_EVENT_SESSION_CONNECTED,

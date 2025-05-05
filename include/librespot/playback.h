@@ -29,6 +29,9 @@ extern void player_free(Player* player);
 extern bool player_is_valid(Player* player);
 extern void player_load(Player* player, const char* spotify_uri, bool start_playing, uint32_t position_ms);
 extern void player_preload(Player* player, const char* spotify_uri);
+extern void player_play(Player* player);
+extern void player_pause(Player* player);
+extern void player_seek(Player* player, uint32_t position_ms);
 
 typedef enum {
     PLAYER_EVENT_NONE,
@@ -43,6 +46,7 @@ typedef enum {
     PLAYER_EVENT_UNAVAILABLE,
     PLAYER_EVENT_VOLUME_CHANGED,
     PLAYER_EVENT_POSITION_CORRECTION,
+    PLAYER_EVENT_POSITION_CHANGED,
     PLAYER_EVENT_SEEKED,
     PLAYER_EVENT_TRACK_CHANGED,
     PLAYER_EVENT_SESSION_CONNECTED,
@@ -112,6 +116,12 @@ typedef struct {
     uint64_t play_request_id;
     SpotifyId* track_id;
     uint32_t position_ms;
+} PlayerEventPositionChanged;
+
+typedef struct {
+    uint64_t play_request_id;
+    SpotifyId* track_id;
+    uint32_t position_ms;
 } PlayerEventSeeked;
 
 typedef struct {} PlayerEventTrackChanged;
@@ -138,6 +148,7 @@ typedef union {
     PlayerEventUnavailable unavailable;
     PlayerEventVolumeChanged volume_changed;
     PlayerEventPositionCorrection position_correction;
+    PlayerEventPositionChanged position_changed;
     PlayerEventSeeked seeked;
     PlayerEventTrackChanged track_changed;
     PlayerEventSessionConnected session_connected;
