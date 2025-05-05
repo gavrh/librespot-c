@@ -29,8 +29,10 @@ target_include_directories(${PROJECT_NAME}
 if(WIN32)
     set(RUST_LIB_NAME "librespot_core.dll")
 elseif(APPLE)
+    set(CMAKE_INSTALL_LIBDIR "/usr/local/lib")
     set(RUST_LIB_NAME "librespot_core.dylib")
 else()
+    set(CMAKE_INSTALL_LIBDIR "/usr/lib")
     set(RUST_LIB_NAME "librespot_core.so")
 endif()
 set(RUST_LIB_PATH "${${PROJECT_NAME}_SOURCE_DIR}/core/target/release/${RUST_LIB_NAME}")
@@ -56,7 +58,7 @@ target_link_libraries(${PROJECT_NAME} PRIVATE ${CMAKE_BINARY_DIR}/lib/${RUST_LIB
 install(
     TARGETS ${PROJECT_NAME}
     EXPORT ${PROJECT_NAME}Targets
-    LIBRARY DESTINATION lib
+    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
     PUBLIC_HEADER DESTINATION include
 )
 
@@ -68,7 +70,7 @@ install(
 install(
     EXPORT ${PROJECT_NAME}Targets
     FILE ${PROJECT_NAME}Targets.cmake
-    DESTINATION lib/cmake/${PROJECT_NAME}
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/${PROJECT_NAME}
 )
 
 configure_file(
@@ -79,11 +81,10 @@ configure_file(
 
 install(
     FILES ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}Config.cmake
-    DESTINATION lib/cmake/${PROJECT_NAME}
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/${PROJECT_NAME}
 )
 
 # install rust core lib
 install(
     FILES ${CMAKE_BINARY_DIR}/lib/${RUST_LIB_NAME}
-    DESTINATION lib
-)
+    DESTINATION ${CMAKE_INSTALL_LIBDIR})
