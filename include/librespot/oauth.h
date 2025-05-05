@@ -1,6 +1,8 @@
 #ifndef LIBRESPOT_OAUTH_H
 #define LIBRESPOT_OAUTH_H
 
+#include <stdint.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -47,6 +49,7 @@ extern OAuth* oauth_build(OAuthBuilder* oauth_builder);
 extern void oauth_free(OAuth* oauth);
 extern const char* oauth_access_token(OAuth* oauth);
 extern const char* oauth_refresh_token(OAuth* oauth);
+extern uint32_t oauth_expires_at(OAuth* oauth);
 
 #ifdef __cplusplus
 }

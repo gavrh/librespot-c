@@ -180,3 +180,10 @@ pub fn oauth_refresh_token(oauth: *mut OAuth) -> *const c_char {
         CString::new((*(*oauth).token).refresh_token.clone()).unwrap().into_raw()
     }
 }
+
+#[no_mangle]
+pub fn oauth_expires_at(oauth: *mut OAuth) -> u32 {
+    unsafe {
+        (*(*oauth).token).expires_at.elapsed().as_millis() as u32
+    }
+}
