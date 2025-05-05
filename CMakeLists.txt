@@ -11,7 +11,10 @@ file(GLOB_RECURSE HEADER_FILES CONFIGURE_DEPENDS
     include/${PROJECT_NAME}/*.h
 )
 
-add_library(${PROJECT_NAME} STATIC ${HEADER_FILES})
+set(EMPTY_SRC "${CMAKE_BINARY_DIR}/_.c")
+file(WRITE ${EMPTY_SRC} "// auto-generated empty source\nvoid __empty(void) {}")
+
+add_library(${PROJECT_NAME} STATIC ${EMPTY_SRC} ${HEADER_FILES})
 set_target_properties(${PROJECT_NAME} PROPERTIES LINKER_LANGUAGE C)
 target_include_directories(${PROJECT_NAME}
     INTERFACE
@@ -32,8 +35,6 @@ else()
 endif()
 set(RUST_LIB_PATH "${${PROJECT_NAME}_SOURCE_DIR}/core/target/release/${RUST_LIB_NAME}")
 
-# non local lib dir
-set(CMAKE_INSTALL_LIBDIR "/usr/lib")
 
 add_custom_target(
     ${PROJECT_NAME}_rust
@@ -55,7 +56,7 @@ target_link_libraries(${PROJECT_NAME} PRIVATE ${CMAKE_BINARY_DIR}/lib/${RUST_LIB
 install(
     TARGETS ${PROJECT_NAME}
     EXPORT ${PROJECT_NAME}Targets
-    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+    LIBRARY DESTINATION lib
     PUBLIC_HEADER DESTINATION include
 )
 
@@ -67,7 +68,7 @@ install(
 install(
     EXPORT ${PROJECT_NAME}Targets
     FILE ${PROJECT_NAME}Targets.cmake
-    DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/${PROJECT_NAME}
+    DESTINATION lib/cmake/${PROJECT_NAME}
 )
 
 configure_file(
@@ -78,11 +79,11 @@ configure_file(
 
 install(
     FILES ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}Config.cmake
-    DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/${PROJECT_NAME}
+    DESTINATION lib/cmake/${PROJECT_NAME}
 )
 
 # install rust core lib
 install(
     FILES ${CMAKE_BINARY_DIR}/lib/${RUST_LIB_NAME}
-    DESTINATION ${CMAKE_INSTALL_LIBDIR}
+    DESTINATION lib
 )
