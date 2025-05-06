@@ -182,8 +182,15 @@ pub fn oauth_refresh_token(oauth: *mut OAuth) -> *const c_char {
 }
 
 #[no_mangle]
-pub fn oauth_expires_at(oauth: *mut OAuth) -> u32 {
+pub fn oauth_expires_at(oauth: *mut OAuth) -> u64 {
     unsafe {
-        (*(*oauth).token).expires_at.elapsed().as_millis() as u32
+        let expiration = (*(*oauth).token)
+            .expires_at.duration_since(std::time::Instant::now())
+            .as_secs();
+
+        match std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH) {
+            Ok(duration) => duration.as_secs() + expiration,
+            Err(_) => 0,
+        }
     }
 }
