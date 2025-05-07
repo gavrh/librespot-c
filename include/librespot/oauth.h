@@ -49,6 +49,7 @@ extern OAuth* oauth_build(OAuthBuilder* oauth_builder);
 extern void oauth_free(OAuth* oauth);
 extern const char* oauth_access_token(OAuth* oauth);
 extern const char* oauth_refresh_token(OAuth* oauth);
+extern void oauth_refresh_auth(OAuth* oauth, const char* refresh_token);
 extern uint64_t oauth_expires_at(OAuth* oauth);
 
 #ifdef __cplusplus

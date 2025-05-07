@@ -12,7 +12,7 @@ use std::ffi::{c_char, c_uchar, CStr};
 use std::sync::Arc;
 use std::time::Duration;
 
-use crate::core::{session_box, session_free, spotify_id_new_internal, Session, SpotifyId};
+use crate::core::{session_box, spotify_id_new_internal, Session, SpotifyId};
 use crate::runtime::runtime;
 
 #[repr(C)]
@@ -181,7 +181,7 @@ pub fn player_load(player: *mut Player, spotify_uri: *const c_char, start_playin
                     eprintln!("Track is not playable.");
                 } else {
                     runtime().block_on(async {
-                        println!("loading {:#?}", spotify_uri);
+                        // println!("loading {:#?}", spotify_uri);
                         (*(*player).0).load(id, start_playing != 0, position_ms);
                     });
                 }
@@ -202,7 +202,7 @@ pub fn player_preload(player: *mut Player, spotify_uri: *const c_char) {
                     eprintln!("Track is not playable.");
                 } else {
                     runtime().block_on(async {
-                        println!("preloading {:#?}", spotify_uri);
+                        // println!("preloading {:#?}", spotify_uri);
                         (*(*player).0).preload(id);
                     });
                 }
@@ -264,7 +264,7 @@ pub fn player_channel_poll(player_channel: *mut PlayerChannel, player_event: *mu
     unsafe {
         match (*(*player_channel).0).try_recv() {
             Ok(event) => {
-                println!("{:#?}", event);
+                // println!("{:#?}", event);
                 match event {
 
                     player::PlayerEvent::PlayRequestIdChanged {
@@ -361,6 +361,20 @@ pub fn player_channel_poll(player_channel: *mut PlayerChannel, player_event: *mu
                         (*player_event).data.time_to_preload_next_track = PlayerEventTimeToPreloadNextTrack {
                             play_request_id, 
                             track_id: spotify_id_new_internal(track_id)
+                        };
+                        return true as u8;
+                    }
+
+                    player::PlayerEvent::PositionChanged {
+                        play_request_id,
+                        track_id,
+                        position_ms
+                    } => {
+                        (*player_event).event = PlayerEventType::PLAYER_EVENT_POSITION_CHANGED;
+                        (*player_event).data.positon_changed = PlayerEventPositionChanged {
+                            play_request_id,
+                            track_id: spotify_id_new_internal(track_id),
+                            position_ms
                         };
                         return true as u8;
                     }
