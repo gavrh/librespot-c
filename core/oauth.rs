@@ -182,6 +182,17 @@ pub fn oauth_refresh_token(oauth: *mut OAuth) -> *const c_char {
 }
 
 #[no_mangle]
+pub fn oauth_refresh_auth(oauth: *mut OAuth, refresh_token: *const c_char) {
+    unsafe {
+        (*(*oauth).token) = (*(*oauth).client)
+            .refresh_token(
+                CStr::from_ptr(refresh_token)
+                .to_str().unwrap()
+            ).unwrap();
+    }
+}
+
+#[no_mangle]
 pub fn oauth_expires_at(oauth: *mut OAuth) -> u64 {
     unsafe {
         let expiration = (*(*oauth).token)
