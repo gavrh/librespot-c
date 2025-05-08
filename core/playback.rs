@@ -134,7 +134,7 @@ pub fn player_new(player_config: *mut PlayerConfig, session: *mut Session, mixer
     let new_player: *mut Player;
     let sink_builder: audio_backend::SinkBuilder = move |device: Option<String>, format: config::AudioFormat| {
         audio_backend::find(
-            Some("pulseaudio".to_string())
+            Some("rodio".to_string())
         ).expect("Failed to find audio backend.")(device, format)
     };
 
