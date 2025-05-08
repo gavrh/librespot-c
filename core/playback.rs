@@ -99,7 +99,7 @@ pub fn player_config_default() -> *mut PlayerConfig {
             config::PlayerConfig {
                 bitrate: config::Bitrate::default(),
                 gapless: true,
-                normalisation: true,
+                normalisation: false,
                 normalisation_type: config::NormalisationType::default(),
                 normalisation_method: config::NormalisationMethod::default(),
                 normalisation_pregain_db: 0.0,
@@ -380,6 +380,7 @@ pub fn player_channel_poll(player_channel: *mut PlayerChannel, player_event: *mu
                     }
 
                     _ => {
+                        (*player_event).event = PlayerEventType::PLAYER_EVENT_NONE;
                         return false as u8;
                     }
                 }
