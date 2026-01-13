@@ -62,44 +62,44 @@ typedef struct {
 
 typedef struct {
     uint64_t play_request_id;
-    SpotifyId* track_id;
+    SpotifyUri* track_id;
 } PlayerEventStopped;
 
 typedef struct {
     uint64_t play_request_id;
-    SpotifyId* track_id;
+    SpotifyUri* track_id;
     uint32_t position_ms;
 } PlayerEventLoading;
 
 typedef struct {
-    SpotifyId* track_id;
+    SpotifyUri* track_id;
 } PlayerEventPreloading;
 
 typedef struct {
     uint64_t play_request_id;
-    SpotifyId* track_id;
+    SpotifyUri* track_id;
     uint32_t position_ms;
 } PlayerEventPlaying;
 
 typedef struct {
     uint64_t play_request_id;
-    SpotifyId* track_id;
+    SpotifyUri* track_id;
     uint32_t position_ms;
 } PlayerEventPaused;
 
 typedef struct {
     uint64_t play_request_id;
-    SpotifyId* track_id;
+    SpotifyUri* track_id;
 } PlayerEventTimeToPreloadNextTrack;
 
 typedef struct {
     uint64_t play_request_id;
-    SpotifyId* track_id;
+    SpotifyUri* track_id;
 } PlayerEventEndOfTrack;
 
 typedef struct {
     uint64_t play_request_id;
-    SpotifyId* track_id;
+    SpotifyUri* track_id;
 } PlayerEventUnavailable;
 
 typedef struct {
@@ -108,19 +108,19 @@ typedef struct {
 
 typedef struct {
     uint64_t play_request_id;
-    SpotifyId* track_id;
+    SpotifyUri* track_id;
     uint32_t position_ms;
 } PlayerEventPositionCorrection;
 
 typedef struct {
     uint64_t play_request_id;
-    SpotifyId* track_id;
+    SpotifyUri* track_id;
     uint32_t position_ms;
 } PlayerEventPositionChanged;
 
 typedef struct {
     uint64_t play_request_id;
-    SpotifyId* track_id;
+    SpotifyUri* track_id;
     uint32_t position_ms;
 } PlayerEventSeeked;
 
