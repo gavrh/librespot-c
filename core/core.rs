@@ -78,25 +78,25 @@ pub fn session_connect(session: *mut Session, credentials: *mut Credentials) {
 }
 
 #[repr(C)]
-pub struct SpotifyId(*mut core::SpotifyId);
+pub struct SpotifyUri(*mut core::SpotifyUri);
 
-pub fn spotify_id_new_internal(spotify_id: core::SpotifyId) -> *mut SpotifyId {
+pub fn spotify_uri_new_internal(spotify_uri: core::SpotifyUri) -> *mut SpotifyUri {
     Box::into_raw(Box::new(
-        SpotifyId(Box::into_raw(Box::new(
-            spotify_id
+        SpotifyUri(Box::into_raw(Box::new(
+            spotify_uri
         )))
     ))
 }
 
 #[no_mangle]
-pub fn spotify_id_new() {}
+pub fn spotify_uri_new() {}
 
 #[no_mangle]
-pub fn spotify_id_free(spotify_id: *mut SpotifyId) {
-    if spotify_id.is_null() {
+pub fn spotify_uri_free(spotify_uri: *mut SpotifyUri) {
+    if spotify_uri.is_null() {
         return;
     }
     unsafe {
-        drop(Box::from_raw(spotify_id));
+        drop(Box::from_raw(spotify_uri));
     }
 }

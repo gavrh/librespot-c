@@ -129,7 +129,7 @@ pub fn oauth_build(oauth_builder: *mut OAuthBuilder) -> *mut OAuth {
             CStr::from_ptr((*oauth_builder).redirect_uri).to_str().unwrap(),
             (*oauth_builder).scopes.iter().map(|s| s.as_str()).collect()
         );
-        if !(*oauth_builder).message.is_empty() {
+        if !(&(*oauth_builder)).message.is_empty() {
             librespot_oauth_builder = librespot_oauth_builder.with_custom_message(&(*oauth_builder).message);
         }
         if (*oauth_builder).auto_open {

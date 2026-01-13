@@ -12,7 +12,7 @@ use std::ffi::{c_char, c_uchar, CStr};
 use std::sync::Arc;
 use std::time::Duration;
 
-use crate::core::{session_box, spotify_id_new_internal, Session, SpotifyId};
+use crate::core::{session_box, spotify_uri_new_internal, Session, SpotifyUri};
 use crate::runtime::runtime;
 
 #[repr(C)]
@@ -50,7 +50,7 @@ pub fn mixer_new(mixer_config: *mut MixerConfig, mixer_name: *const c_char) -> *
             Mixer(Box::into_raw(Box::new(
                 mixer::find(Some(
                     CStr::from_ptr(mixer_name).to_str().unwrap()
-                )).expect("Failed to find mixer.")(*Box::from_raw((*mixer_config).0))
+                )).expect("Failed to find mixer.")(*Box::from_raw((*mixer_config).0)).expect("Failed to create mixer.")
             )))
         ));
     }
@@ -107,6 +107,7 @@ pub fn player_config_default() -> *mut PlayerConfig {
                 normalisation_attack_cf: 0.005,
                 normalisation_release_cf: 0.1,
                 normalisation_knee_db: 5.0,
+                local_file_directories: vec![],
                 passthrough: false,
                 ditherer: Some(config::mk_ditherer::<config::TriangularDitherer>),
                 position_update_interval: Some(Duration::from_millis(500))
@@ -175,7 +176,7 @@ pub fn player_is_valid(player: *mut Player) -> u8 {
 #[no_mangle]
 pub fn player_load(player: *mut Player, spotify_uri: *const c_char, start_playing: c_uchar, position_ms: u32) {
     unsafe {
-        match core::SpotifyId::from_uri(CStr::from_ptr(spotify_uri).to_str().unwrap()) {
+        match core::SpotifyUri::from_uri(CStr::from_ptr(spotify_uri).to_str().unwrap()) {
             Ok(id) => {
                 if !id.is_playable() {
                     eprintln!("Track is not playable.");
@@ -196,7 +197,7 @@ pub fn player_load(player: *mut Player, spotify_uri: *const c_char, start_playin
 #[no_mangle]
 pub fn player_preload(player: *mut Player, spotify_uri: *const c_char) {
     unsafe {
-        match core::SpotifyId::from_uri(CStr::from_ptr(spotify_uri).to_str().unwrap()) {
+        match core::SpotifyUri::from_uri(CStr::from_ptr(spotify_uri).to_str().unwrap()) {
             Ok(id) => {
                 if !id.is_playable() {
                     eprintln!("Track is not playable.");
@@ -284,7 +285,7 @@ pub fn player_channel_poll(player_channel: *mut PlayerChannel, player_event: *mu
                         (*player_event).event = PlayerEventType::PLAYER_EVENT_STOPPED;
                         (*player_event).data.stopped = PlayerEventStopped {
                             play_request_id,
-                            track_id: spotify_id_new_internal(track_id)
+                            track_id: spotify_uri_new_internal(track_id)
                         };
                         return true as u8;
                     }
@@ -297,7 +298,7 @@ pub fn player_channel_poll(player_channel: *mut PlayerChannel, player_event: *mu
                         (*player_event).event = PlayerEventType::PLAYER_EVENT_LOADING;
                         (*player_event).data.loading = PlayerEventLoading {
                             play_request_id,
-                            track_id: spotify_id_new_internal(track_id),
+                            track_id: spotify_uri_new_internal(track_id),
                             position_ms
                         };
                         return true as u8;
@@ -308,7 +309,7 @@ pub fn player_channel_poll(player_channel: *mut PlayerChannel, player_event: *mu
                     } => {
                         (*player_event).event = PlayerEventType::PLAYER_EVENT_PRELOADING;
                         (*player_event).data.preloading = PlayerEventPreloading {
-                            track_id: spotify_id_new_internal(track_id)
+                            track_id: spotify_uri_new_internal(track_id)
                         };
                         return true as u8;
                     }
@@ -321,7 +322,7 @@ pub fn player_channel_poll(player_channel: *mut PlayerChannel, player_event: *mu
                         (*player_event).event = PlayerEventType::PLAYER_EVENT_PLAYING;
                         (*player_event).data.playing = PlayerEventPlaying {
                             play_request_id,
-                            track_id: spotify_id_new_internal(track_id),
+                            track_id: spotify_uri_new_internal(track_id),
                             position_ms
                         };
                         return true as u8;
@@ -335,7 +336,7 @@ pub fn player_channel_poll(player_channel: *mut PlayerChannel, player_event: *mu
                         (*player_event).event = PlayerEventType::PLAYER_EVENT_PAUSED;
                         (*player_event).data.paused = PlayerEventPaused {
                             play_request_id,
-                            track_id: spotify_id_new_internal(track_id),
+                            track_id: spotify_uri_new_internal(track_id),
                             position_ms
                         };
                         return true as u8;
@@ -348,7 +349,7 @@ pub fn player_channel_poll(player_channel: *mut PlayerChannel, player_event: *mu
                         (*player_event).event = PlayerEventType::PLAYER_EVENT_END_OF_TRACK;
                         (*player_event).data.end_of_track = PlayerEventEndOfTrack {
                             play_request_id, 
-                            track_id: spotify_id_new_internal(track_id)
+                            track_id: spotify_uri_new_internal(track_id)
                         };
                         return true as u8;
                     }
@@ -360,7 +361,7 @@ pub fn player_channel_poll(player_channel: *mut PlayerChannel, player_event: *mu
                         (*player_event).event = PlayerEventType::PLAYER_EVENT_TIME_TO_PRELOAD_NEXT_TRACK;
                         (*player_event).data.time_to_preload_next_track = PlayerEventTimeToPreloadNextTrack {
                             play_request_id, 
-                            track_id: spotify_id_new_internal(track_id)
+                            track_id: spotify_uri_new_internal(track_id)
                         };
                         return true as u8;
                     }
@@ -373,7 +374,7 @@ pub fn player_channel_poll(player_channel: *mut PlayerChannel, player_event: *mu
                         (*player_event).event = PlayerEventType::PLAYER_EVENT_POSITION_CHANGED;
                         (*player_event).data.positon_changed = PlayerEventPositionChanged {
                             play_request_id,
-                            track_id: spotify_id_new_internal(track_id),
+                            track_id: spotify_uri_new_internal(track_id),
                             position_ms
                         };
                         return true as u8;
@@ -403,28 +404,28 @@ pub struct PlayerEventPlayRequestIdChanged {
 #[derive(Clone, Copy)]
 pub struct PlayerEventStopped {
     pub play_request_id: u64,
-    pub track_id: *mut SpotifyId
+    pub track_id: *mut SpotifyUri
 }
 
 #[repr(C)]
 #[derive(Clone, Copy)]
 pub struct PlayerEventLoading {
     pub play_request_id: u64,
-    pub track_id: *mut SpotifyId,
+    pub track_id: *mut SpotifyUri,
     pub position_ms: u32
 }
 
 #[repr(C)]
 #[derive(Clone, Copy)]
 pub struct PlayerEventPreloading {
-    pub track_id: *mut SpotifyId
+    pub track_id: *mut SpotifyUri
 }
 
 #[repr(C)]
 #[derive(Clone, Copy)]
 pub struct PlayerEventPlaying {
     pub play_request_id: u64,
-    pub track_id: *mut SpotifyId,
+    pub track_id: *mut SpotifyUri,
     pub position_ms: u32
 }
 
@@ -432,7 +433,7 @@ pub struct PlayerEventPlaying {
 #[derive(Clone, Copy)]
 pub struct PlayerEventPaused {
     pub play_request_id: u64,
-    pub track_id: *mut SpotifyId,
+    pub track_id: *mut SpotifyUri,
     pub position_ms: u32
 }
 
@@ -440,21 +441,21 @@ pub struct PlayerEventPaused {
 #[derive(Clone, Copy)]
 pub struct PlayerEventTimeToPreloadNextTrack {
     pub play_request_id: u64,
-    pub track_id: *mut SpotifyId
+    pub track_id: *mut SpotifyUri
 }
 
 #[repr(C)]
 #[derive(Clone, Copy)]
 pub struct PlayerEventEndOfTrack {
     pub play_request_id: u64,
-    pub track_id: *mut SpotifyId
+    pub track_id: *mut SpotifyUri
 }
 
 #[repr(C)]
 #[derive(Clone, Copy)]
 pub struct PlayerEventUnavailable {
     pub play_request_id: u64,
-    pub track_id: *mut SpotifyId
+    pub track_id: *mut SpotifyUri
 }
 
 #[repr(C)]
@@ -467,7 +468,7 @@ pub struct PlayerEventVolumeChanged {
 #[derive(Clone, Copy)]
 pub struct PlayerEventPositionCorrection {
     pub play_request_id: u64,
-    pub track_id: *mut SpotifyId,
+    pub track_id: *mut SpotifyUri,
     pub position_ms: u32
 }
 
@@ -475,7 +476,7 @@ pub struct PlayerEventPositionCorrection {
 #[derive(Clone, Copy)]
 pub struct PlayerEventPositionChanged {
     pub play_request_id: u64,
-    pub track_id: *mut SpotifyId,
+    pub track_id: *mut SpotifyUri,
     pub position_ms: u32
 }
 
@@ -483,7 +484,7 @@ pub struct PlayerEventPositionChanged {
 #[derive(Clone, Copy)]
 pub struct PlayerEventSeeked {
     pub play_request_id: u64,
-    pub track_id: *mut SpotifyId,
+    pub track_id: *mut SpotifyUri,
     pub position_ms: u32
 }
 
@@ -505,7 +506,7 @@ pub union PlayerEventData {
 }
 
 #[repr(C)]
-#[allow(non_camel_case_types)]
+#[allow(non_camel_case_types, dead_code)]
 pub enum PlayerEventType {
     PLAYER_EVENT_NONE,
     PLAYER_EVENT_PLAYER_REQUEST_ID_CHANGED,
