@@ -83,32 +83,9 @@ pub fn oauth_builder_add_scope(oauth_builder: *mut OAuthBuilder, scope: c_int) {
             25 => (*oauth_builder).scopes.push("user-read-recently-played".to_string()),
             26 => (*oauth_builder).scopes.push("user-top-read".to_string()),
             27 => {
-                (*oauth_builder).scopes.push("app-remote-control".to_string());
-                (*oauth_builder).scopes.push("playlist-modify".to_string());
-                (*oauth_builder).scopes.push("playlist-modify-private".to_string());
-                (*oauth_builder).scopes.push("playlist-modify-public".to_string());
-                (*oauth_builder).scopes.push("playlist-read".to_string());
-                (*oauth_builder).scopes.push("playlist-read-collaborative".to_string());
-                (*oauth_builder).scopes.push("playlist-read-private".to_string());
-                (*oauth_builder).scopes.push("streaming".to_string());
-                (*oauth_builder).scopes.push("ugc-image-upload".to_string());
-                (*oauth_builder).scopes.push("user-follow-modify".to_string());
-                (*oauth_builder).scopes.push("user-follow-read".to_string());
-                (*oauth_builder).scopes.push("user-library-modify".to_string());
-                (*oauth_builder).scopes.push("user-library-read".to_string());
-                (*oauth_builder).scopes.push("user-modify".to_string());
-                (*oauth_builder).scopes.push("user-modify-playback-state".to_string());
-                (*oauth_builder).scopes.push("user-modify-private".to_string());
-                (*oauth_builder).scopes.push("user-personalized".to_string());
-                (*oauth_builder).scopes.push("user-read-birthdate".to_string());
-                (*oauth_builder).scopes.push("user-read-currently-playing".to_string());
-                (*oauth_builder).scopes.push("user-read-email".to_string());
-                (*oauth_builder).scopes.push("user-read-play-history".to_string());
-                (*oauth_builder).scopes.push("user-read-playback-position".to_string());
-                (*oauth_builder).scopes.push("user-read-playback-state".to_string());
-                (*oauth_builder).scopes.push("user-read-private".to_string());
-                (*oauth_builder).scopes.push("user-read-recently-played".to_string());
-                (*oauth_builder).scopes.push("user-top-read".to_string());
+                for i in 1..=26 {
+                    oauth_builder_add_scope(oauth_builder, i);
+                }
             },
             _ => return
         }

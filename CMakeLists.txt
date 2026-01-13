@@ -87,4 +87,5 @@ install(
 # install rust core lib
 install(
     FILES ${CMAKE_BINARY_DIR}/lib/${RUST_LIB_NAME}
-    DESTINATION ${CMAKE_INSTALL_LIBDIR})
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}
+)
