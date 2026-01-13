@@ -41,10 +41,11 @@ sudo make install
 Quick Start Variables:
 | Variable | Value |
 | - | - |
-| **SPOTIFY_API_CLIENT_ID:** | [ncspot client id](https://github.com/hrkfdn/ncspot/blob/master/src/authentication.rs) |
-| **REDIRECT_URI:** | http://127.0.0.1:8888/login |
-| **MIXER**: | softvol |
-| **BACKEND**: | rodio |
+| **SPOTIFY_API_CLIENT_ID** | [ncspot client id](https://github.com/hrkfdn/ncspot/blob/master/src/authentication.rs) |
+| **REDIRECT_URI** | http://127.0.0.1:8888/login |
+| **MIXER** | softvol |
+| **BACKEND** | rodio |
+| **TRACK_ID** | [Le Festin](https://open.spotify.com/track/02JIdsrod3BYucThfUFDUX): 02JIdsrod3BYucThfUFDUX |
 
 ```c
 #include <librespot/oauth.h>
@@ -73,7 +74,7 @@ int main() {
     Player* player = player_new(player_config_default(), session, mixer, "BACKEND");
 
     // play song
-    player_load(player, "spotify:track:<TRACK_ID>", true, 0);
+    player_load(player, "spotify:track:TRACK_ID", true, 0);
 
     // player channel and event loop
     PlayerChannel* channel = player_channel_get(player);
