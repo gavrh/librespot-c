@@ -37,6 +37,15 @@ sudo make install
 > ```
 
 ## Get Started
+
+Quick Start Variables:
+| Variable | Value |
+| - | - |
+| **SPOTIFY_API_CLIENT_ID:** | [ncspot client id](https://github.com/hrkfdn/ncspot/blob/master/src/authentication.rs) |
+| **REDIRECT_URI:** | http://127.0.0.1:8888/login |
+| **MIXER**: | softvol |
+| **BACKEND**: | rodio |
+
 ```c
 #include <librespot/oauth.h>
 #include <librespot/core.h>
@@ -66,8 +75,25 @@ int main() {
     // play song
     player_load(player, "spotify:track:<TRACK_ID>", true, 0);
 
+    // player channel and event loop
+    PlayerChannel* channel = player_channel_get(player);
+    PlayerEvent event;
     while (true) {
-        // coming soon...
+        if (player_channel_poll(channel, &event)) {
+            switch (event.event) {
+                case PLAYER_EVENT_PLAYING:
+                    // event.data.playing to access union fields
+                    break;
+                case PLAYER_EVENT_LOADING:
+                    // event.data.laoding to access union fields
+                    break;
+
+                // and so on for the other events...
+
+                default:
+                    break;
+            }
+        }
     }
 
     return 0;
