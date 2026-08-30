@@ -41,7 +41,7 @@ sudo make install
 Quick Start Variables:
 | Variable | Value |
 | - | - |
-| **SPOTIFY_API_CLIENT_ID** | [ncspot client id](https://github.com/hrkfdn/ncspot/blob/master/src/authentication.rs) |
+| **SPOTIFY_API_CLIENT_ID** | [ncspot's spotify client id](https://github.com/hrkfdn/ncspot/blob/master/src/authentication.rs) |
 | **REDIRECT_URI** | http://127.0.0.1:8888/login |
 | **MIXER** | softvol |
 | **BACKEND** | rodio |
