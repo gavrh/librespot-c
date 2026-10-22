@@ -35,17 +35,18 @@ else()
     set(CMAKE_INSTALL_LIBDIR "/usr/lib")
     set(RUST_LIB_NAME "librespot_core.so")
 endif()
-set(RUST_LIB_PATH "${${PROJECT_NAME}_SOURCE_DIR}/core/target/release/${RUST_LIB_NAME}")
+set(RUST_LIB_PATH "${CMAKE_CURRENT_SOURCE_DIR}/core/target/release/${RUST_LIB_NAME}")
 
 
 add_custom_target(
     ${PROJECT_NAME}_rust
     COMMAND cargo build --release
-    WORKING_DIRECTORY ${${PROJECT_NAME}_SOURCE_DIR}/core
+    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/core
 )
 add_custom_command(
     TARGET ${PROJECT_NAME}_rust
     POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_BINARY_DIR}/lib
     COMMAND ${CMAKE_COMMAND} -E copy
         ${RUST_LIB_PATH}
         ${CMAKE_BINARY_DIR}/lib/${RUST_LIB_NAME}
