@@ -4,7 +4,7 @@ use std::fs::OpenOptions;
 #[cfg(unix)]
 use std::os::unix::io::{AsRawFd, RawFd};
 #[cfg(windows)]
-use std::os::windows::io::RawHandle;
+use winapi::shared::ntdef::HANDLE;
 
 #[cfg(unix)]
 use libc;
@@ -26,11 +26,11 @@ pub struct OutputRedirect {
     original_stderr: Option<RawFd>,
 
     #[cfg(windows)]
-    original_stdout: Option<RawHandle>,
+    original_stdout: Option<HANDLE>,
     #[cfg(windows)]
-    original_stderr: Option<RawHandle>,
+    original_stderr: Option<HANDLE>,
     #[cfg(windows)]
-    dev_null: Option<RawHandle>,
+    dev_null: Option<HANDLE>,
 }
 
 impl OutputRedirect {
