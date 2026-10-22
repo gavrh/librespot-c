@@ -125,6 +125,5 @@ if(WIN32)
     install(
         FILES ${CMAKE_CURRENT_SOURCE_DIR}/core/target/release/${RUST_IMPORT_LIB_NAME}
         DESTINATION ${CMAKE_INSTALL_LIBDIR}
-        OPTIONAL
     )
 endif()

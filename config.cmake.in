@@ -4,9 +4,11 @@ if(NOT TARGET librespot_core)
     add_library(librespot_core SHARED IMPORTED)
 
     if(WIN32)
+        set_and_check(_librespot_core_implib
+            "@PACKAGE_LIBRESPOT_INSTALL_LIBDIR@/@RUST_IMPORT_LIB_NAME@")
         set_target_properties(librespot_core PROPERTIES
             IMPORTED_LOCATION "@PACKAGE_LIBRESPOT_INSTALL_BINDIR@/@RUST_LIB_NAME@"
-            IMPORTED_IMPLIB "@PACKAGE_LIBRESPOT_INSTALL_LIBDIR@/@RUST_IMPORT_LIB_NAME@"
+            IMPORTED_IMPLIB "${_librespot_core_implib}"
         )
     else()
         set_target_properties(librespot_core PROPERTIES
