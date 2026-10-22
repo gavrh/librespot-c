@@ -26,10 +26,10 @@ target_include_directories(${PROJECT_NAME}
 )
 
 if(WIN32)
-    set(RUST_LIB_NAME "librespot_core.dll")
+    set(RUST_LIB_NAME "respot_core.dll")
     set(RUST_LIB_INSTALL_DIR "${CMAKE_INSTALL_BINDIR}")
     if(MSVC)
-        set(RUST_IMPORT_LIB_NAME "librespot_core.dll.lib")
+        set(RUST_IMPORT_LIB_NAME "respot_core.dll.lib")
     else()
         set(RUST_IMPORT_LIB_NAME "librespot_core.dll.a")
     endif()
