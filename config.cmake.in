@@ -1,11 +1,34 @@
 @PACKAGE_INIT@
 
+if(NOT TARGET librespot_core)
+    add_library(librespot_core SHARED IMPORTED)
+
+    if(WIN32)
+        set_target_properties(librespot_core PROPERTIES
+            IMPORTED_LOCATION "@PACKAGE_LIBRESPOT_INSTALL_BINDIR@/@RUST_LIB_NAME@"
+            IMPORTED_IMPLIB "@PACKAGE_LIBRESPOT_INSTALL_LIBDIR@/@RUST_IMPORT_LIB_NAME@"
+        )
+    else()
+        set_target_properties(librespot_core PROPERTIES
+            IMPORTED_LOCATION "@PACKAGE_LIBRESPOT_INSTALL_LIBDIR@/@RUST_LIB_NAME@"
+        )
+    endif()
+endif()
+
+if(NOT EXISTS "${CMAKE_CURRENT_LIST_DIR}/librespotTargets.cmake")
+    message(FATAL_ERROR
+        "The librespot package is incomplete: librespotTargets.cmake is missing from ${CMAKE_CURRENT_LIST_DIR}.")
+endif()
+
 include("${CMAKE_CURRENT_LIST_DIR}/librespotTargets.cmake")
 
-set(librespot_INCLUDE_DIRS "@LIBRESPOT_INCLUDE_DIRS@" CACHE STRING "Include directories for librespot")
-
-set(librespot_LIBRARIES "@LIBRESPOT_LIBRARIES@" CACHE STRING "Libraries for librespot")
-
 if(NOT TARGET librespot)
-  message(FATAL_ERROR "librespot was not found. Please ensure it is correctly installed.")
+    message(FATAL_ERROR
+        "The librespot package is incomplete: the librespot target was not defined.")
 endif()
+
+set_and_check(librespot_INCLUDE_DIR "@PACKAGE_LIBRESPOT_INSTALL_INCLUDEDIR@")
+set(librespot_INCLUDE_DIRS "${librespot_INCLUDE_DIR}")
+set(librespot_LIBRARIES librespot)
+
+check_required_components(librespot)
