@@ -139,17 +139,21 @@ impl OutputRedirect {
         }
     }
 
-    pub fn restore(self) {
+    pub fn restore(mut self) {
+        self.restore_inner();
+    }
+
+    fn restore_inner(&mut self) {
         #[cfg(unix)]
         {
-            if let Some(original_stdout) = self.original_stdout {
+            if let Some(original_stdout) = self.original_stdout.take() {
                 unsafe {
                     libc::dup2(original_stdout, 1);
                     libc::close(original_stdout);
                 }
             }
 
-            if let Some(original_stderr) = self.original_stderr {
+            if let Some(original_stderr) = self.original_stderr.take() {
                 unsafe {
                     libc::dup2(original_stderr, 2);
                     libc::close(original_stderr);
@@ -159,19 +163,19 @@ impl OutputRedirect {
 
         #[cfg(windows)]
         {
-            if let Some(original_stdout) = self.original_stdout {
+            if let Some(original_stdout) = self.original_stdout.take() {
                 unsafe {
                     SetStdHandle(STD_OUTPUT_HANDLE, original_stdout);
                 }
             }
 
-            if let Some(original_stderr) = self.original_stderr {
+            if let Some(original_stderr) = self.original_stderr.take() {
                 unsafe {
                     SetStdHandle(STD_ERROR_HANDLE, original_stderr);
                 }
             }
 
-            if let Some(dev_null) = self.dev_null {
+            if let Some(dev_null) = self.dev_null.take() {
                 unsafe {
                     CloseHandle(dev_null);
                 }
@@ -201,5 +205,11 @@ impl OutputRedirect {
         {
             Self {}
         }
+    }
+}
+
+impl Drop for OutputRedirect {
+    fn drop(&mut self) {
+        self.restore_inner();
     }
 }
