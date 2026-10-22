@@ -1,0 +1,87 @@
+name: Build
+
+on:
+  pull_request:
+    branches:
+      - master
+  push:
+    branches:
+      - master
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: ${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            name: Linux
+          - os: macos-latest
+            name: macOS
+          - os: windows-latest
+            name: Windows
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: core
+
+      - name: Install Linux system dependencies
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y pkg-config libasound2-dev libpulse-dev libssl-dev
+
+      - name: Build Rust cdylib
+        shell: bash
+        run: cargo build --release --manifest-path core/Cargo.toml
+
+      - name: Configure CMake
+        shell: bash
+        run: cmake -S . -B build-ci -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build CMake project
+        shell: bash
+        run: cmake --build build-ci --config Release --parallel
+
+      - name: Verify Rust shared library artifact
+        shell: bash
+        run: |
+          case "$RUNNER_OS" in
+            Linux)
+              library="core/target/release/librespot_core.so"
+              ;;
+            macOS)
+              library="core/target/release/librespot_core.dylib"
+              ;;
+            Windows)
+              library="core/target/release/respot_core.dll"
+              import_library="core/target/release/respot_core.dll.lib"
+              test -f "$import_library"
+              ;;
+            *)
+              echo "Unsupported runner OS: $RUNNER_OS" >&2
+              exit 1
+              ;;
+          esac
+          test -f "$library"
+
+      - name: Install CMake project
+        shell: bash
+        run: |
+          cmake --install build-ci --config Release --prefix "$RUNNER_TEMP/librespot-install"
+          find "$RUNNER_TEMP/librespot-install" -type f | sort
