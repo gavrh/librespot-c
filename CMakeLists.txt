@@ -2,12 +2,14 @@ cmake_minimum_required(VERSION 3.12)
 
 project(librespot VERSION 1.0.0 LANGUAGES C)
 
+include(GNUInstallDirs)
+
 set(CMAKE_C_STANDARD 99)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 set(CMAKE_C_EXTENSIONS OFF)
 set(CMAKE_STATIC_LIBRARY_PREFIX "")
 
-file(GLOB_RECURSE HEADER_FILES CONFIGURE_DEPENDS
+file(GLOB HEADER_FILES CONFIGURE_DEPENDS
     include/${PROJECT_NAME}/*.h
 )
 
@@ -17,26 +19,29 @@ file(WRITE ${EMPTY_SRC} "// auto-generated empty source\nvoid __empty(void) {}")
 add_library(${PROJECT_NAME} STATIC ${EMPTY_SRC} ${HEADER_FILES})
 set_target_properties(${PROJECT_NAME} PROPERTIES LINKER_LANGUAGE C)
 target_include_directories(${PROJECT_NAME}
-    INTERFACE
-        $<INSTALL_INTERFACE:include>
-        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
     PUBLIC
-        $<INSTALL_INTERFACE:include>
-    PRIVATE
-    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+        $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
 )
 
 if(WIN32)
     set(RUST_LIB_NAME "librespot_core.dll")
+    set(RUST_LIB_INSTALL_DIR "${CMAKE_INSTALL_BINDIR}")
+    if(MSVC)
+        set(RUST_IMPORT_LIB_NAME "librespot_core.dll.lib")
+    else()
+        set(RUST_IMPORT_LIB_NAME "librespot_core.dll.a")
+    endif()
 elseif(APPLE)
-    set(CMAKE_INSTALL_LIBDIR "/usr/local/lib")
     set(RUST_LIB_NAME "librespot_core.dylib")
+    set(RUST_LIB_INSTALL_DIR "${CMAKE_INSTALL_LIBDIR}")
+    set(RUST_IMPORT_LIB_NAME "")
 else()
-    set(CMAKE_INSTALL_LIBDIR "/usr/lib")
     set(RUST_LIB_NAME "librespot_core.so")
+    set(RUST_LIB_INSTALL_DIR "${CMAKE_INSTALL_LIBDIR}")
+    set(RUST_IMPORT_LIB_NAME "")
 endif()
 set(RUST_LIB_PATH "${CMAKE_CURRENT_SOURCE_DIR}/core/target/release/${RUST_LIB_NAME}")
-
 
 add_custom_target(
     ${PROJECT_NAME}_rust
@@ -59,13 +64,12 @@ target_link_libraries(${PROJECT_NAME} PRIVATE ${CMAKE_BINARY_DIR}/lib/${RUST_LIB
 install(
     TARGETS ${PROJECT_NAME}
     EXPORT ${PROJECT_NAME}Targets
-    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
-    PUBLIC_HEADER DESTINATION include
+    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
 )
 
 install(
-    DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/include/${PROJECT_NAME}/
-    DESTINATION include/${PROJECT_NAME}
+    FILES ${HEADER_FILES}
+    DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/${PROJECT_NAME}
 )
 
 install(
@@ -88,5 +92,5 @@ install(
 # install rust core lib
 install(
     FILES ${CMAKE_BINARY_DIR}/lib/${RUST_LIB_NAME}
-    DESTINATION ${CMAKE_INSTALL_LIBDIR}
+    DESTINATION ${RUST_LIB_INSTALL_DIR}
 )
