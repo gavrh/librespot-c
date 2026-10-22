@@ -1,58 +1,99 @@
+#[cfg(unix)]
 use std::fs::OpenOptions;
 
 #[cfg(unix)]
 use std::os::unix::io::{AsRawFd, RawFd};
 #[cfg(windows)]
-use std::os::windows::io::{AsRawHandle, RawHandle};
+use std::os::windows::io::RawHandle;
 
 #[cfg(unix)]
 use libc;
 #[cfg(windows)]
-use winapi::um::handleapi::INVALID_HANDLE_VALUE;
+use winapi::um::fileapi::{CreateFileA, OPEN_EXISTING};
 #[cfg(windows)]
-use winapi::um::fileapi::CreateFileA;
+use winapi::um::handleapi::{CloseHandle, INVALID_HANDLE_VALUE};
 #[cfg(windows)]
-use winapi::um::winbase::{FILE_ATTRIBUTE_NORMAL, FILE_GENERIC_WRITE, OPEN_EXISTING};
+use winapi::um::processenv::{GetStdHandle, SetStdHandle};
+#[cfg(windows)]
+use winapi::um::winbase::{STD_ERROR_HANDLE, STD_OUTPUT_HANDLE};
+#[cfg(windows)]
+use winapi::um::winnt::{FILE_ATTRIBUTE_NORMAL, FILE_GENERIC_WRITE};
 
 pub struct OutputRedirect {
     #[cfg(unix)]
-    original_stdout: RawFd,
+    original_stdout: Option<RawFd>,
     #[cfg(unix)]
-    original_stderr: RawFd,
+    original_stderr: Option<RawFd>,
 
     #[cfg(windows)]
-    original_stdout: RawHandle,
+    original_stdout: Option<RawHandle>,
     #[cfg(windows)]
-    original_stderr: RawHandle,
+    original_stderr: Option<RawHandle>,
+    #[cfg(windows)]
+    dev_null: Option<RawHandle>,
 }
 
 impl OutputRedirect {
     pub fn redirect() -> Self {
+        Self::try_redirect().unwrap_or_else(Self::inactive)
+    }
+
+    pub fn try_redirect() -> Option<Self> {
         #[cfg(unix)]
         {
-            let dev_null = OpenOptions::new().write(true).open("/dev/null").unwrap();
+            let dev_null = OpenOptions::new().write(true).open("/dev/null").ok()?;
             let dev_null_fd = dev_null.as_raw_fd();
 
             let original_stdout = unsafe { libc::dup(1) };
-            let original_stderr = unsafe { libc::dup(2) };
-
-            unsafe {
-                libc::dup2(dev_null_fd, 1);
-                libc::dup2(dev_null_fd, 2);
+            if original_stdout < 0 {
+                return None;
             }
 
-            Self { original_stdout, original_stderr }
+            let original_stderr = unsafe { libc::dup(2) };
+            if original_stderr < 0 {
+                unsafe {
+                    libc::close(original_stdout);
+                }
+                return None;
+            }
+
+            if unsafe { libc::dup2(dev_null_fd, 1) } < 0 {
+                unsafe {
+                    libc::close(original_stdout);
+                    libc::close(original_stderr);
+                }
+                return None;
+            }
+
+            if unsafe { libc::dup2(dev_null_fd, 2) } < 0 {
+                unsafe {
+                    libc::dup2(original_stdout, 1);
+                    libc::close(original_stdout);
+                    libc::close(original_stderr);
+                }
+                return None;
+            }
+
+            Some(Self {
+                original_stdout: Some(original_stdout),
+                original_stderr: Some(original_stderr),
+            })
         }
 
         #[cfg(windows)]
         {
             use std::ptr;
-            use winapi::um::processenv::GetStdHandle;
-            use winapi::um::handleapi::CloseHandle;
-            use winapi::um::winbase::{STD_OUTPUT_HANDLE, STD_ERROR_HANDLE};
 
             let original_stdout = unsafe { GetStdHandle(STD_OUTPUT_HANDLE) };
             let original_stderr = unsafe { GetStdHandle(STD_ERROR_HANDLE) };
+
+            if original_stdout.is_null()
+                || original_stdout == INVALID_HANDLE_VALUE
+                || original_stderr.is_null()
+                || original_stderr == INVALID_HANDLE_VALUE
+            {
+                return None;
+            }
 
             let dev_null = unsafe {
                 CreateFileA(
@@ -67,39 +108,98 @@ impl OutputRedirect {
             };
 
             if dev_null == INVALID_HANDLE_VALUE {
-                panic!("Failed to open NUL device");
+                return None;
             }
 
-            unsafe {
-                libc::dup2(dev_null as i32, 1);
-                libc::dup2(dev_null as i32, 2);
-                CloseHandle(dev_null);
+            if unsafe { SetStdHandle(STD_OUTPUT_HANDLE, dev_null) } == 0 {
+                unsafe {
+                    CloseHandle(dev_null);
+                }
+                return None;
             }
 
-            Self { original_stdout, original_stderr }
+            if unsafe { SetStdHandle(STD_ERROR_HANDLE, dev_null) } == 0 {
+                unsafe {
+                    SetStdHandle(STD_OUTPUT_HANDLE, original_stdout);
+                    CloseHandle(dev_null);
+                }
+                return None;
+            }
+
+            Some(Self {
+                original_stdout: Some(original_stdout),
+                original_stderr: Some(original_stderr),
+                dev_null: Some(dev_null),
+            })
+        }
+
+        #[cfg(not(any(unix, windows)))]
+        {
+            None
         }
     }
 
     pub fn restore(self) {
         #[cfg(unix)]
         {
-            unsafe {
-                libc::dup2(self.original_stdout, 1);
-                libc::dup2(self.original_stderr, 2);
-                libc::close(self.original_stdout);
-                libc::close(self.original_stderr);
+            if let Some(original_stdout) = self.original_stdout {
+                unsafe {
+                    libc::dup2(original_stdout, 1);
+                    libc::close(original_stdout);
+                }
+            }
+
+            if let Some(original_stderr) = self.original_stderr {
+                unsafe {
+                    libc::dup2(original_stderr, 2);
+                    libc::close(original_stderr);
+                }
             }
         }
 
         #[cfg(windows)]
         {
-            use winapi::um::processenv::SetStdHandle;
-            use winapi::um::winbase::{STD_OUTPUT_HANDLE, STD_ERROR_HANDLE};
-
-            unsafe {
-                SetStdHandle(STD_OUTPUT_HANDLE, self.original_stdout);
-                SetStdHandle(STD_ERROR_HANDLE, self.original_stderr);
+            if let Some(original_stdout) = self.original_stdout {
+                unsafe {
+                    SetStdHandle(STD_OUTPUT_HANDLE, original_stdout);
+                }
             }
+
+            if let Some(original_stderr) = self.original_stderr {
+                unsafe {
+                    SetStdHandle(STD_ERROR_HANDLE, original_stderr);
+                }
+            }
+
+            if let Some(dev_null) = self.dev_null {
+                unsafe {
+                    CloseHandle(dev_null);
+                }
+            }
+        }
+    }
+
+    fn inactive() -> Self {
+        #[cfg(unix)]
+        {
+            Self {
+                original_stdout: None,
+                original_stderr: None,
+            }
+        }
+
+        #[cfg(windows)]
+        {
+            Self {
+                original_stdout: None,
+                original_stderr: None,
+                dev_null: None,
+            }
+        }
+
+        #[cfg(not(any(unix, windows)))]
+        {
+            Self {}
         }
     }
 }
