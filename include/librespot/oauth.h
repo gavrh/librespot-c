@@ -2,6 +2,7 @@
 #define LIBRESPOT_OAUTH_H
 
 #include <stdint.h>
+#include <librespot/error.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -40,16 +41,16 @@ typedef enum {
 typedef struct OAuthBuilder OAuthBuilder;
 extern OAuthBuilder* oauth_builder_new(const char* client_id, const char* redirect_uri);
 extern void oauth_builder_free(OAuthBuilder* oauth_builder);
-extern void oauth_builder_custom_message(OAuthBuilder* oauth_builder, const char* message);
-extern void oauth_builder_auto_open(OAuthBuilder* oauth_builder);
-extern void oauth_builder_add_scope(OAuthBuilder* oauth_builder, OAuthScope scope);
+extern LibrespotStatus oauth_builder_custom_message(OAuthBuilder* oauth_builder, const char* message);
+extern LibrespotStatus oauth_builder_auto_open(OAuthBuilder* oauth_builder);
+extern LibrespotStatus oauth_builder_add_scope(OAuthBuilder* oauth_builder, OAuthScope scope);
 
 typedef struct OAuth OAuth;
 extern OAuth* oauth_build(OAuthBuilder* oauth_builder);
 extern void oauth_free(OAuth* oauth);
 extern const char* oauth_access_token(OAuth* oauth);
 extern const char* oauth_refresh_token(OAuth* oauth);
-extern void oauth_refresh_auth(OAuth* oauth, const char* refresh_token);
+extern LibrespotStatus oauth_refresh_auth(OAuth* oauth, const char* refresh_token);
 extern uint64_t oauth_expires_at(OAuth* oauth);
 
 #ifdef __cplusplus
