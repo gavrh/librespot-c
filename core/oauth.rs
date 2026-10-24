@@ -407,7 +407,10 @@ pub extern "C" fn oauth_refresh_auth(
 #[no_mangle]
 pub extern "C" fn oauth_expires_at(oauth: *mut OAuth) -> u64 {
     ffi_guard(0, || {
+        clear_error();
+
         if oauth.is_null() {
+            set_error("oauth must not be NULL");
             return 0;
         }
 
