@@ -13,6 +13,7 @@ libc = "0.2.170"
 librespot = { git = "https://github.com/librespot-org/librespot", branch = "dev", features = ["rodio-backend"] }
 tokio = { version = "1.43.0", features = ["full"] }
 tokio-stream = { version = "0.1.17", features = ["full"] }
+url = "2"
 
 [target.'cfg(windows)'.dependencies]
 winapi = { version = "0.3", features = ["fileapi", "handleapi", "processenv", "winbase", "winnt"] }
