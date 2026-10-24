@@ -313,7 +313,7 @@ pub extern "C" fn session_connect(session: *mut Session, credentials: *mut Crede
                 return LIBRESPOT_ERR_FAILED;
             }
         };
-        let credentials = credentials_ref(credentials).clone();
+        let credentials = unsafe { credentials_ref(credentials).clone() };
 
         let result = runtime.block_on(unsafe { &(*session).0 }.connect(credentials, false));
         match result {
