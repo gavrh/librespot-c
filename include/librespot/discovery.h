@@ -1,6 +1,8 @@
 #ifndef LIBRESPOT_DISCOVERY_H
 #define LIBRESPOT_DISCOVERY_H
 
+#include <librespot/error.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
