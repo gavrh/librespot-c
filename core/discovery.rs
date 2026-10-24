@@ -7,7 +7,7 @@ use std::ptr::null_mut;
 #[repr(C)]
 pub struct Credentials(discovery::Credentials);
 
-pub fn credentials_ref<'a>(credentials: *mut Credentials) -> &'a discovery::Credentials {
+pub unsafe fn credentials_ref<'a>(credentials: *mut Credentials) -> &'a discovery::Credentials {
     unsafe { &(*credentials).0 }
 }
 
