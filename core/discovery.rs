@@ -12,7 +12,7 @@ pub unsafe fn credentials_ref<'a>(credentials: *mut Credentials) -> &'a discover
 }
 
 #[no_mangle]
-pub fn credentials_new(access_token: *const c_char) -> *mut Credentials {
+pub extern "C" fn credentials_new(access_token: *const c_char) -> *mut Credentials {
     ffi_guard(null_mut(), || {
         clear_error();
 
@@ -36,7 +36,7 @@ pub fn credentials_new(access_token: *const c_char) -> *mut Credentials {
 }
 
 #[no_mangle]
-pub fn credentials_free(credentials: *mut Credentials) {
+pub extern "C" fn credentials_free(credentials: *mut Credentials) {
     ffi_guard((), || {
         if credentials.is_null() {
             return;

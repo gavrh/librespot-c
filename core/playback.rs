@@ -483,7 +483,7 @@ pub extern "C" fn player_channel_poll(
         match event {
             player::PlayerEvent::PlayRequestIdChanged { play_request_id } => {
                 unsafe {
-                    (*player_event).event = PlayerEventType::PLAYER_EVENT_PLAYER_REQUEST_ID_CHANGED;
+                    (*player_event).event = PlayerEventType::PLAYER_EVENT_PLAY_REQUEST_ID_CHANGED;
                     (*player_event).data.play_request_id_changed =
                         PlayerEventPlayRequestIdChanged { play_request_id };
                 }
@@ -604,6 +604,48 @@ pub extern "C" fn player_channel_poll(
                 true
             }
 
+            player::PlayerEvent::Unavailable {
+                play_request_id,
+                track_id,
+            } => {
+                let track_id = channel_track_id(&mut player_channel.track_ids, track_id);
+
+                unsafe {
+                    (*player_event).event = PlayerEventType::PLAYER_EVENT_UNAVAILABLE;
+                    (*player_event).data.unavailable = PlayerEventUnavailable {
+                        play_request_id,
+                        track_id,
+                    };
+                }
+                true
+            }
+
+            player::PlayerEvent::VolumeChanged { volume } => {
+                unsafe {
+                    (*player_event).event = PlayerEventType::PLAYER_EVENT_VOLUME_CHANGED;
+                    (*player_event).data.volume_changed = PlayerEventVolumeChanged { volume };
+                }
+                true
+            }
+
+            player::PlayerEvent::PositionCorrection {
+                play_request_id,
+                track_id,
+                position_ms,
+            } => {
+                let track_id = channel_track_id(&mut player_channel.track_ids, track_id);
+
+                unsafe {
+                    (*player_event).event = PlayerEventType::PLAYER_EVENT_POSITION_CORRECTION;
+                    (*player_event).data.position_correction = PlayerEventPositionCorrection {
+                        play_request_id,
+                        track_id,
+                        position_ms,
+                    };
+                }
+                true
+            }
+
             player::PlayerEvent::PositionChanged {
                 play_request_id,
                 track_id,
@@ -613,7 +655,25 @@ pub extern "C" fn player_channel_poll(
 
                 unsafe {
                     (*player_event).event = PlayerEventType::PLAYER_EVENT_POSITION_CHANGED;
-                    (*player_event).data.positon_changed = PlayerEventPositionChanged {
+                    (*player_event).data.position_changed = PlayerEventPositionChanged {
+                        play_request_id,
+                        track_id,
+                        position_ms,
+                    };
+                }
+                true
+            }
+
+            player::PlayerEvent::Seeked {
+                play_request_id,
+                track_id,
+                position_ms,
+            } => {
+                let track_id = channel_track_id(&mut player_channel.track_ids, track_id);
+
+                unsafe {
+                    (*player_event).event = PlayerEventType::PLAYER_EVENT_SEEKED;
+                    (*player_event).data.seeked = PlayerEventSeeked {
                         play_request_id,
                         track_id,
                         position_ms,
@@ -699,7 +759,7 @@ pub struct PlayerEventUnavailable {
 #[repr(C)]
 #[derive(Clone, Copy)]
 pub struct PlayerEventVolumeChanged {
-    pub volume: u64,
+    pub volume: u16,
 }
 
 #[repr(C)]
@@ -738,8 +798,8 @@ pub union PlayerEventData {
     pub end_of_track: PlayerEventEndOfTrack,
     pub unavailable: PlayerEventUnavailable,
     pub volume_changed: PlayerEventVolumeChanged,
-    pub positon_correction: PlayerEventPositionCorrection,
-    pub positon_changed: PlayerEventPositionChanged,
+    pub position_correction: PlayerEventPositionCorrection,
+    pub position_changed: PlayerEventPositionChanged,
     pub seeked: PlayerEventSeeked,
 }
 
@@ -747,7 +807,7 @@ pub union PlayerEventData {
 #[allow(non_camel_case_types, dead_code)]
 pub enum PlayerEventType {
     PLAYER_EVENT_NONE,
-    PLAYER_EVENT_PLAYER_REQUEST_ID_CHANGED,
+    PLAYER_EVENT_PLAY_REQUEST_ID_CHANGED,
     PLAYER_EVENT_STOPPED,
     PLAYER_EVENT_LOADING,
     PLAYER_EVENT_PRELOADING,

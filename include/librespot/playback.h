@@ -163,7 +163,7 @@ typedef struct {
     PlayerEventType event;
     PlayerEventData data;
 } PlayerEvent;
-extern PlayerEvent* player_event_new();
+extern PlayerEvent* player_event_new(void);
 extern void player_event_free(PlayerEvent* player_event);
 
 typedef struct PlayerChannel PlayerChannel;
