@@ -170,8 +170,10 @@ pub extern "C" fn player_config_default() -> *mut PlayerConfig {
     ffi_guard(ptr::null_mut(), || {
         clear_error();
 
-        let mut player_config = config::PlayerConfig::default();
-        player_config.position_update_interval = Some(Duration::from_millis(500));
+        let player_config = config::PlayerConfig {
+            position_update_interval: Some(Duration::from_millis(500)),
+            ..config::PlayerConfig::default()
+        };
 
         Box::into_raw(Box::new(PlayerConfig(player_config)))
     })
