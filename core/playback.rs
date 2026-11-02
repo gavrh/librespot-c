@@ -470,224 +470,263 @@ pub extern "C" fn player_channel_poll(
             spotify_uri_free(track_id);
         }
 
-        let event = match player_channel.receiver.try_recv() {
-            Ok(event) => event,
-            Err(_) => {
-                unsafe {
-                    (*player_event).event = PlayerEventType::PLAYER_EVENT_NONE;
+        loop {
+            let event = match player_channel.receiver.try_recv() {
+                Ok(event) => event,
+                Err(_) => {
+                    unsafe {
+                        (*player_event).event = PlayerEventType::PLAYER_EVENT_NONE;
+                    }
+                    return false;
                 }
-                return false;
-            }
-        };
+            };
 
-        match event {
-            player::PlayerEvent::PlayRequestIdChanged { play_request_id } => {
-                unsafe {
-                    (*player_event).event = PlayerEventType::PLAYER_EVENT_PLAY_REQUEST_ID_CHANGED;
-                    (*player_event).data.play_request_id_changed =
-                        PlayerEventPlayRequestIdChanged { play_request_id };
+            return match event {
+                player::PlayerEvent::PlayRequestIdChanged { play_request_id } => {
+                    unsafe {
+                        (*player_event).event = PlayerEventType::PLAYER_EVENT_PLAY_REQUEST_ID_CHANGED;
+                        (*player_event).data.play_request_id_changed =
+                            PlayerEventPlayRequestIdChanged { play_request_id };
+                    }
+                    true
                 }
-                true
-            }
 
-            player::PlayerEvent::Stopped {
-                play_request_id,
-                track_id,
-            } => {
-                let track_id = channel_track_id(&mut player_channel.track_ids, track_id);
+                player::PlayerEvent::Stopped {
+                    play_request_id,
+                    track_id,
+                } => {
+                    let track_id = channel_track_id(&mut player_channel.track_ids, track_id);
 
-                unsafe {
-                    (*player_event).event = PlayerEventType::PLAYER_EVENT_STOPPED;
-                    (*player_event).data.stopped = PlayerEventStopped {
-                        play_request_id,
-                        track_id,
-                    };
-                }
-                true
-            }
-
-            player::PlayerEvent::Loading {
-                play_request_id,
-                track_id,
-                position_ms,
-            } => {
-                let track_id = channel_track_id(&mut player_channel.track_ids, track_id);
-
-                unsafe {
-                    (*player_event).event = PlayerEventType::PLAYER_EVENT_LOADING;
-                    (*player_event).data.loading = PlayerEventLoading {
-                        play_request_id,
-                        track_id,
-                        position_ms,
-                    };
-                }
-                true
-            }
-
-            player::PlayerEvent::Preloading { track_id } => {
-                let track_id = channel_track_id(&mut player_channel.track_ids, track_id);
-
-                unsafe {
-                    (*player_event).event = PlayerEventType::PLAYER_EVENT_PRELOADING;
-                    (*player_event).data.preloading = PlayerEventPreloading { track_id };
-                }
-                true
-            }
-
-            player::PlayerEvent::Playing {
-                play_request_id,
-                track_id,
-                position_ms,
-            } => {
-                let track_id = channel_track_id(&mut player_channel.track_ids, track_id);
-
-                unsafe {
-                    (*player_event).event = PlayerEventType::PLAYER_EVENT_PLAYING;
-                    (*player_event).data.playing = PlayerEventPlaying {
-                        play_request_id,
-                        track_id,
-                        position_ms,
-                    };
-                }
-                true
-            }
-
-            player::PlayerEvent::Paused {
-                play_request_id,
-                track_id,
-                position_ms,
-            } => {
-                let track_id = channel_track_id(&mut player_channel.track_ids, track_id);
-
-                unsafe {
-                    (*player_event).event = PlayerEventType::PLAYER_EVENT_PAUSED;
-                    (*player_event).data.paused = PlayerEventPaused {
-                        play_request_id,
-                        track_id,
-                        position_ms,
-                    };
-                }
-                true
-            }
-
-            player::PlayerEvent::TimeToPreloadNextTrack {
-                play_request_id,
-                track_id,
-            } => {
-                let track_id = channel_track_id(&mut player_channel.track_ids, track_id);
-
-                unsafe {
-                    (*player_event).event =
-                        PlayerEventType::PLAYER_EVENT_TIME_TO_PRELOAD_NEXT_TRACK;
-                    (*player_event).data.time_to_preload_next_track =
-                        PlayerEventTimeToPreloadNextTrack {
+                    unsafe {
+                        (*player_event).event = PlayerEventType::PLAYER_EVENT_STOPPED;
+                        (*player_event).data.stopped = PlayerEventStopped {
                             play_request_id,
                             track_id,
                         };
+                    }
+                    true
                 }
-                true
-            }
 
-            player::PlayerEvent::EndOfTrack {
-                play_request_id,
-                track_id,
-            } => {
-                let track_id = channel_track_id(&mut player_channel.track_ids, track_id);
+                player::PlayerEvent::Loading {
+                    play_request_id,
+                    track_id,
+                    position_ms,
+                } => {
+                    let track_id = channel_track_id(&mut player_channel.track_ids, track_id);
 
-                unsafe {
-                    (*player_event).event = PlayerEventType::PLAYER_EVENT_END_OF_TRACK;
-                    (*player_event).data.end_of_track = PlayerEventEndOfTrack {
-                        play_request_id,
-                        track_id,
-                    };
+                    unsafe {
+                        (*player_event).event = PlayerEventType::PLAYER_EVENT_LOADING;
+                        (*player_event).data.loading = PlayerEventLoading {
+                            play_request_id,
+                            track_id,
+                            position_ms,
+                        };
+                    }
+                    true
                 }
-                true
-            }
 
-            player::PlayerEvent::Unavailable {
-                play_request_id,
-                track_id,
-            } => {
-                let track_id = channel_track_id(&mut player_channel.track_ids, track_id);
+                player::PlayerEvent::Preloading { track_id } => {
+                    let track_id = channel_track_id(&mut player_channel.track_ids, track_id);
 
-                unsafe {
-                    (*player_event).event = PlayerEventType::PLAYER_EVENT_UNAVAILABLE;
-                    (*player_event).data.unavailable = PlayerEventUnavailable {
-                        play_request_id,
-                        track_id,
-                    };
+                    unsafe {
+                        (*player_event).event = PlayerEventType::PLAYER_EVENT_PRELOADING;
+                        (*player_event).data.preloading = PlayerEventPreloading { track_id };
+                    }
+                    true
                 }
-                true
-            }
 
-            player::PlayerEvent::VolumeChanged { volume } => {
-                unsafe {
-                    (*player_event).event = PlayerEventType::PLAYER_EVENT_VOLUME_CHANGED;
-                    (*player_event).data.volume_changed = PlayerEventVolumeChanged { volume };
+                player::PlayerEvent::Playing {
+                    play_request_id,
+                    track_id,
+                    position_ms,
+                } => {
+                    let track_id = channel_track_id(&mut player_channel.track_ids, track_id);
+
+                    unsafe {
+                        (*player_event).event = PlayerEventType::PLAYER_EVENT_PLAYING;
+                        (*player_event).data.playing = PlayerEventPlaying {
+                            play_request_id,
+                            track_id,
+                            position_ms,
+                        };
+                    }
+                    true
                 }
-                true
-            }
 
-            player::PlayerEvent::PositionCorrection {
-                play_request_id,
-                track_id,
-                position_ms,
-            } => {
-                let track_id = channel_track_id(&mut player_channel.track_ids, track_id);
+                player::PlayerEvent::Paused {
+                    play_request_id,
+                    track_id,
+                    position_ms,
+                } => {
+                    let track_id = channel_track_id(&mut player_channel.track_ids, track_id);
 
-                unsafe {
-                    (*player_event).event = PlayerEventType::PLAYER_EVENT_POSITION_CORRECTION;
-                    (*player_event).data.position_correction = PlayerEventPositionCorrection {
-                        play_request_id,
-                        track_id,
-                        position_ms,
-                    };
+                    unsafe {
+                        (*player_event).event = PlayerEventType::PLAYER_EVENT_PAUSED;
+                        (*player_event).data.paused = PlayerEventPaused {
+                            play_request_id,
+                            track_id,
+                            position_ms,
+                        };
+                    }
+                    true
                 }
-                true
-            }
 
-            player::PlayerEvent::PositionChanged {
-                play_request_id,
-                track_id,
-                position_ms,
-            } => {
-                let track_id = channel_track_id(&mut player_channel.track_ids, track_id);
+                player::PlayerEvent::TimeToPreloadNextTrack {
+                    play_request_id,
+                    track_id,
+                } => {
+                    let track_id = channel_track_id(&mut player_channel.track_ids, track_id);
 
-                unsafe {
-                    (*player_event).event = PlayerEventType::PLAYER_EVENT_POSITION_CHANGED;
-                    (*player_event).data.position_changed = PlayerEventPositionChanged {
-                        play_request_id,
-                        track_id,
-                        position_ms,
-                    };
+                    unsafe {
+                        (*player_event).event =
+                            PlayerEventType::PLAYER_EVENT_TIME_TO_PRELOAD_NEXT_TRACK;
+                        (*player_event).data.time_to_preload_next_track =
+                            PlayerEventTimeToPreloadNextTrack {
+                                play_request_id,
+                                track_id,
+                            };
+                    }
+                    true
                 }
-                true
-            }
 
-            player::PlayerEvent::Seeked {
-                play_request_id,
-                track_id,
-                position_ms,
-            } => {
-                let track_id = channel_track_id(&mut player_channel.track_ids, track_id);
+                player::PlayerEvent::EndOfTrack {
+                    play_request_id,
+                    track_id,
+                } => {
+                    let track_id = channel_track_id(&mut player_channel.track_ids, track_id);
 
-                unsafe {
-                    (*player_event).event = PlayerEventType::PLAYER_EVENT_SEEKED;
-                    (*player_event).data.seeked = PlayerEventSeeked {
-                        play_request_id,
-                        track_id,
-                        position_ms,
-                    };
+                    unsafe {
+                        (*player_event).event = PlayerEventType::PLAYER_EVENT_END_OF_TRACK;
+                        (*player_event).data.end_of_track = PlayerEventEndOfTrack {
+                            play_request_id,
+                            track_id,
+                        };
+                    }
+                    true
                 }
-                true
-            }
 
-            _ => {
-                unsafe {
-                    (*player_event).event = PlayerEventType::PLAYER_EVENT_NONE;
+                player::PlayerEvent::Unavailable {
+                    play_request_id,
+                    track_id,
+                } => {
+                    let track_id = channel_track_id(&mut player_channel.track_ids, track_id);
+
+                    unsafe {
+                        (*player_event).event = PlayerEventType::PLAYER_EVENT_UNAVAILABLE;
+                        (*player_event).data.unavailable = PlayerEventUnavailable {
+                            play_request_id,
+                            track_id,
+                        };
+                    }
+                    true
                 }
-                false
-            }
+
+                player::PlayerEvent::VolumeChanged { volume } => {
+                    unsafe {
+                        (*player_event).event = PlayerEventType::PLAYER_EVENT_VOLUME_CHANGED;
+                        (*player_event).data.volume_changed = PlayerEventVolumeChanged { volume };
+                    }
+                    true
+                }
+
+                player::PlayerEvent::PositionCorrection {
+                    play_request_id,
+                    track_id,
+                    position_ms,
+                } => {
+                    let track_id = channel_track_id(&mut player_channel.track_ids, track_id);
+
+                    unsafe {
+                        (*player_event).event = PlayerEventType::PLAYER_EVENT_POSITION_CORRECTION;
+                        (*player_event).data.position_correction = PlayerEventPositionCorrection {
+                            play_request_id,
+                            track_id,
+                            position_ms,
+                        };
+                    }
+                    true
+                }
+
+                player::PlayerEvent::PositionChanged {
+                    play_request_id,
+                    track_id,
+                    position_ms,
+                } => {
+                    let track_id = channel_track_id(&mut player_channel.track_ids, track_id);
+
+                    unsafe {
+                        (*player_event).event = PlayerEventType::PLAYER_EVENT_POSITION_CHANGED;
+                        (*player_event).data.position_changed = PlayerEventPositionChanged {
+                            play_request_id,
+                            track_id,
+                            position_ms,
+                        };
+                    }
+                    true
+                }
+
+                player::PlayerEvent::Seeked {
+                    play_request_id,
+                    track_id,
+                    position_ms,
+                } => {
+                    let track_id = channel_track_id(&mut player_channel.track_ids, track_id);
+
+                    unsafe {
+                        (*player_event).event = PlayerEventType::PLAYER_EVENT_SEEKED;
+                        (*player_event).data.seeked = PlayerEventSeeked {
+                            play_request_id,
+                            track_id,
+                            position_ms,
+                        };
+                    }
+                    true
+                }
+
+                player::PlayerEvent::TrackChanged { .. } => {
+                    unsafe {
+                        (*player_event).event = PlayerEventType::PLAYER_EVENT_TRACK_CHANGED;
+                    }
+                    true
+                }
+
+                player::PlayerEvent::SessionConnected { .. } => {
+                    unsafe {
+                        (*player_event).event = PlayerEventType::PLAYER_EVENT_SESSION_CONNECTED;
+                    }
+                    true
+                }
+
+                player::PlayerEvent::SessionDisconnected { .. } => {
+                    unsafe {
+                        (*player_event).event = PlayerEventType::PLAYER_EVENT_SESSION_DISCONNECTED;
+                    }
+                    true
+                }
+
+                player::PlayerEvent::SessionClientChanged { .. } => {
+                    unsafe {
+                        (*player_event).event = PlayerEventType::PLAYER_EVENT_SESSION_CLIENT_CHANGED;
+                    }
+                    true
+                }
+
+                player::PlayerEvent::ShuffleChanged { .. } => {
+                    unsafe {
+                        (*player_event).event = PlayerEventType::PLAYER_EVENT_SHUFFLE_CHANGED;
+                    }
+                    true
+                }
+
+                player::PlayerEvent::RepeatChanged { .. } => {
+                    unsafe {
+                        (*player_event).event = PlayerEventType::PLAYER_EVENT_REPEAT_CHANGED;
+                    }
+                    true
+                }
+
+                _ => continue,
+            };
         }
     })
 }
