@@ -2,6 +2,7 @@
 #define LIBRESPOT_PLAYBACK_H
 
 #include <librespot/core.h>
+#include <librespot/error.h>
 #include <stdint.h>
 #include <stdbool.h>
 
@@ -10,28 +11,28 @@ extern "C" {
 #endif
 
 typedef struct MixerConfig MixerConfig;
-extern MixerConfig* mixer_config_default();
+extern MixerConfig* mixer_config_default(void);
 extern void mixer_config_free(MixerConfig* mixer_config);
 
 typedef struct Mixer Mixer;
 extern Mixer* mixer_new(MixerConfig* mixer_config, const char* mixer_name);
 extern void mixer_free(Mixer* mixer);
 extern uint16_t mixer_get_volume(Mixer* mixer);
-extern void mixer_set_volume(Mixer* mixer, uint16_t volume);
+extern LibrespotStatus mixer_set_volume(Mixer* mixer, uint16_t volume);
 
 typedef struct PlayerConfig PlayerConfig;
-extern PlayerConfig* player_config_default();
+extern PlayerConfig* player_config_default(void);
 extern void player_config_free(PlayerConfig* player_config);
 
 typedef struct Player Player;
 extern Player* player_new(PlayerConfig* player_config, Session* session, Mixer* mixer, const char* audio_backend);
 extern void player_free(Player* player);
 extern bool player_is_valid(Player* player);
-extern void player_load(Player* player, const char* spotify_uri, bool start_playing, uint32_t position_ms);
-extern void player_preload(Player* player, const char* spotify_uri);
-extern void player_play(Player* player);
-extern void player_pause(Player* player);
-extern void player_seek(Player* player, uint32_t position_ms);
+extern LibrespotStatus player_load(Player* player, const char* spotify_uri, bool start_playing, uint32_t position_ms);
+extern LibrespotStatus player_preload(Player* player, const char* spotify_uri);
+extern LibrespotStatus player_play(Player* player);
+extern LibrespotStatus player_pause(Player* player);
+extern LibrespotStatus player_seek(Player* player, uint32_t position_ms);
 
 typedef enum {
     PLAYER_EVENT_NONE,
@@ -162,7 +163,7 @@ typedef struct {
     PlayerEventType event;
     PlayerEventData data;
 } PlayerEvent;
-extern PlayerEvent* player_event_new();
+extern PlayerEvent* player_event_new(void);
 extern void player_event_free(PlayerEvent* player_event);
 
 typedef struct PlayerChannel PlayerChannel;
