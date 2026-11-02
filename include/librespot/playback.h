@@ -2,6 +2,7 @@
 #define LIBRESPOT_PLAYBACK_H
 
 #include <librespot/core.h>
+#include <librespot/error.h>
 #include <stdint.h>
 #include <stdbool.h>
 
@@ -10,17 +11,17 @@ extern "C" {
 #endif
 
 typedef struct MixerConfig MixerConfig;
-extern MixerConfig* mixer_config_default();
+extern MixerConfig* mixer_config_default(void);
 extern void mixer_config_free(MixerConfig* mixer_config);
 
 typedef struct Mixer Mixer;
 extern Mixer* mixer_new(MixerConfig* mixer_config, const char* mixer_name);
 extern void mixer_free(Mixer* mixer);
 extern uint16_t mixer_get_volume(Mixer* mixer);
-extern void mixer_set_volume(Mixer* mixer, uint16_t volume);
+extern LibrespotStatus mixer_set_volume(Mixer* mixer, uint16_t volume);
 
 typedef struct PlayerConfig PlayerConfig;
-extern PlayerConfig* player_config_default();
+extern PlayerConfig* player_config_default(void);
 extern void player_config_free(PlayerConfig* player_config);
 
 typedef struct Player Player;
