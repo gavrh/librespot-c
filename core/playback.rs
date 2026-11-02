@@ -18,7 +18,6 @@ use crate::error::{
     LIBRESPOT_OK,
 };
 use crate::ffi::{ffi_guard, ffi_status};
-use crate::runtime::runtime;
 
 fn string_from_c<'a>(value: *const c_char, name: &str) -> Result<&'a str, c_int> {
     if value.is_null() {
@@ -30,6 +29,21 @@ fn string_from_c<'a>(value: *const c_char, name: &str) -> Result<&'a str, c_int>
         set_error(format!("{name} is not valid UTF-8: {error}"));
         LIBRESPOT_ERR_INVALID_STRING
     })
+}
+
+fn parse_spotify_uri(spotify_uri: *const c_char) -> Result<core::SpotifyUri, c_int> {
+    let spotify_uri = string_from_c(spotify_uri, "spotify_uri")?;
+    let uri = core::SpotifyUri::from_uri(spotify_uri).map_err(|error| {
+        set_error(format!("failed to parse Spotify URI: {error}"));
+        LIBRESPOT_ERR_INVALID_ARGUMENT
+    })?;
+
+    if !uri.is_playable() {
+        set_error(format!("Spotify URI is not playable: {spotify_uri}"));
+        return Err(LIBRESPOT_ERR_INVALID_ARGUMENT);
+    }
+
+    Ok(uri)
 }
 
 #[repr(C)]
@@ -281,64 +295,103 @@ pub extern "C" fn player_load(
     spotify_uri: *const c_char,
     start_playing: c_uchar,
     position_ms: u32,
-) {
-    unsafe {
-        match core::SpotifyUri::from_uri(CStr::from_ptr(spotify_uri).to_str().unwrap()) {
-            Ok(id) => {
-                if !id.is_playable() {
-                    eprintln!("Track is not playable.");
-                } else {
-                    runtime().block_on(async {
-                        (*player).0.load(id, start_playing != 0, position_ms);
-                    });
-                }
-            }
-            Err(e) => {
-                eprintln!("Failed to load spotify uri: {}", e)
-            }
+) -> c_int {
+    ffi_status(|| {
+        clear_error();
+
+        if player.is_null() {
+            set_error("player must not be NULL");
+            return LIBRESPOT_ERR_INVALID_ARGUMENT;
         }
-    }
-}
 
-#[no_mangle]
-pub extern "C" fn player_preload(player: *mut Player, spotify_uri: *const c_char) {
-    unsafe {
-        match core::SpotifyUri::from_uri(CStr::from_ptr(spotify_uri).to_str().unwrap()) {
-            Ok(id) => {
-                if !id.is_playable() {
-                    eprintln!("Track is not playable.");
-                } else {
-                    runtime().block_on(async {
-                        (*player).0.preload(id);
-                    });
-                }
-            }
-            Err(e) => {
-                eprintln!("Failed to load spotify uri: {}", e)
-            }
+        let uri = match parse_spotify_uri(spotify_uri) {
+            Ok(uri) => uri,
+            Err(status) => return status,
+        };
+
+        unsafe {
+            (*player).0.load(uri, start_playing != 0, position_ms);
         }
-    }
+
+        LIBRESPOT_OK
+    })
 }
 
 #[no_mangle]
-pub extern "C" fn player_play(player: *mut Player) {
-    unsafe {
-        (*player).0.play();
-    }
+pub extern "C" fn player_preload(player: *mut Player, spotify_uri: *const c_char) -> c_int {
+    ffi_status(|| {
+        clear_error();
+
+        if player.is_null() {
+            set_error("player must not be NULL");
+            return LIBRESPOT_ERR_INVALID_ARGUMENT;
+        }
+
+        let uri = match parse_spotify_uri(spotify_uri) {
+            Ok(uri) => uri,
+            Err(status) => return status,
+        };
+
+        unsafe {
+            (*player).0.preload(uri);
+        }
+
+        LIBRESPOT_OK
+    })
 }
 
 #[no_mangle]
-pub extern "C" fn player_pause(player: *mut Player) {
-    unsafe {
-        (*player).0.pause();
-    }
+pub extern "C" fn player_play(player: *mut Player) -> c_int {
+    ffi_status(|| {
+        clear_error();
+
+        if player.is_null() {
+            set_error("player must not be NULL");
+            return LIBRESPOT_ERR_INVALID_ARGUMENT;
+        }
+
+        unsafe {
+            (*player).0.play();
+        }
+
+        LIBRESPOT_OK
+    })
 }
 
 #[no_mangle]
-pub extern "C" fn player_seek(player: *mut Player, position_ms: u32) {
-    unsafe {
-        (*player).0.seek(position_ms);
-    }
+pub extern "C" fn player_pause(player: *mut Player) -> c_int {
+    ffi_status(|| {
+        clear_error();
+
+        if player.is_null() {
+            set_error("player must not be NULL");
+            return LIBRESPOT_ERR_INVALID_ARGUMENT;
+        }
+
+        unsafe {
+            (*player).0.pause();
+        }
+
+        LIBRESPOT_OK
+    })
+}
+
+#[no_mangle]
+pub extern "C" fn player_seek(player: *mut Player, position_ms: u32) -> c_int {
+    ffi_status(|| {
+        clear_error();
+
+        if player.is_null() {
+            set_error("player must not be NULL");
+            return LIBRESPOT_ERR_INVALID_ARGUMENT;
+        }
+
+        unsafe {
+            (*player).0.seek(position_ms);
+        }
+
+        LIBRESPOT_OK
+    })
 }
 
 #[repr(C)]

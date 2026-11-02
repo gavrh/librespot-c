@@ -28,11 +28,11 @@ typedef struct Player Player;
 extern Player* player_new(PlayerConfig* player_config, Session* session, Mixer* mixer, const char* audio_backend);
 extern void player_free(Player* player);
 extern bool player_is_valid(Player* player);
-extern void player_load(Player* player, const char* spotify_uri, bool start_playing, uint32_t position_ms);
-extern void player_preload(Player* player, const char* spotify_uri);
-extern void player_play(Player* player);
-extern void player_pause(Player* player);
-extern void player_seek(Player* player, uint32_t position_ms);
+extern LibrespotStatus player_load(Player* player, const char* spotify_uri, bool start_playing, uint32_t position_ms);
+extern LibrespotStatus player_preload(Player* player, const char* spotify_uri);
+extern LibrespotStatus player_play(Player* player);
+extern LibrespotStatus player_pause(Player* player);
+extern LibrespotStatus player_seek(Player* player, uint32_t position_ms);
 
 typedef enum {
     PLAYER_EVENT_NONE,
