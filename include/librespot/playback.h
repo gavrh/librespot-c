@@ -15,6 +15,23 @@ typedef struct MixerConfig MixerConfig;
 extern MixerConfig* mixer_config_default(void);
 extern void mixer_config_free(MixerConfig* mixer_config);
 
+typedef enum {
+    MIXER_VOLUME_CONTROL_CUBIC = 0,
+    MIXER_VOLUME_CONTROL_FIXED = 1,
+    MIXER_VOLUME_CONTROL_LINEAR = 2,
+    MIXER_VOLUME_CONTROL_LOG = 3
+} MixerVolumeControl;
+
+extern LibrespotStatus mixer_config_set_device(MixerConfig* mixer_config, const char* device);
+extern LibrespotStatus mixer_config_set_control(MixerConfig* mixer_config, const char* control);
+extern LibrespotStatus mixer_config_set_index(MixerConfig* mixer_config, uint32_t index);
+extern LibrespotStatus mixer_config_set_volume_ctrl(MixerConfig* mixer_config, MixerVolumeControl control);
+extern LibrespotStatus mixer_config_set_volume_ctrl_with_range(
+    MixerConfig* mixer_config,
+    MixerVolumeControl control,
+    double db_range
+);
+
 typedef struct Mixer Mixer;
 extern Mixer* mixer_new(MixerConfig* mixer_config, const char* mixer_name);
 extern void mixer_free(Mixer* mixer);

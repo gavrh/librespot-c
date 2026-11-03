@@ -95,6 +95,125 @@ pub extern "C" fn mixer_config_free(mixer_config: *mut MixerConfig) {
     });
 }
 
+#[no_mangle]
+pub extern "C" fn mixer_config_set_device(
+    mixer_config: *mut MixerConfig,
+    device: *const c_char,
+) -> c_int {
+    ffi_status(|| {
+        clear_error();
+
+        if mixer_config.is_null() {
+            set_error("mixer_config must not be NULL");
+            return LIBRESPOT_ERR_INVALID_ARGUMENT;
+        }
+
+        let device = match string_from_c(device, "device") {
+            Ok(device) => device.to_owned(),
+            Err(status) => return status,
+        };
+
+        unsafe {
+            (*mixer_config).0.device = device;
+        }
+
+        LIBRESPOT_OK
+    })
+}
+
+#[no_mangle]
+pub extern "C" fn mixer_config_set_control(
+    mixer_config: *mut MixerConfig,
+    control: *const c_char,
+) -> c_int {
+    ffi_status(|| {
+        clear_error();
+
+        if mixer_config.is_null() {
+            set_error("mixer_config must not be NULL");
+            return LIBRESPOT_ERR_INVALID_ARGUMENT;
+        }
+
+        let control = match string_from_c(control, "control") {
+            Ok(control) => control.to_owned(),
+            Err(status) => return status,
+        };
+
+        unsafe {
+            (*mixer_config).0.control = control;
+        }
+
+        LIBRESPOT_OK
+    })
+}
+
+#[no_mangle]
+pub extern "C" fn mixer_config_set_index(mixer_config: *mut MixerConfig, index: u32) -> c_int {
+    ffi_status(|| {
+        clear_error();
+
+        if mixer_config.is_null() {
+            set_error("mixer_config must not be NULL");
+            return LIBRESPOT_ERR_INVALID_ARGUMENT;
+        }
+
+        unsafe {
+            (*mixer_config).0.index = index;
+        }
+
+        LIBRESPOT_OK
+    })
+}
+
+#[no_mangle]
+pub extern "C" fn mixer_config_set_volume_ctrl(
+    mixer_config: *mut MixerConfig,
+    control: c_int,
+) -> c_int {
+    mixer_config_set_volume_ctrl_with_range(
+        mixer_config,
+        control,
+        config::VolumeCtrl::DEFAULT_DB_RANGE,
+    )
+}
+
+#[no_mangle]
+pub extern "C" fn mixer_config_set_volume_ctrl_with_range(
+    mixer_config: *mut MixerConfig,
+    control: c_int,
+    db_range: f64,
+) -> c_int {
+    ffi_status(|| {
+        clear_error();
+
+        if mixer_config.is_null() {
+            set_error("mixer_config must not be NULL");
+            return LIBRESPOT_ERR_INVALID_ARGUMENT;
+        }
+
+        if let Err(status) = ensure_positive(db_range, "db_range") {
+            return status;
+        }
+
+        let volume_ctrl = match control {
+            0 => config::VolumeCtrl::Cubic(db_range),
+            1 => config::VolumeCtrl::Fixed,
+            2 => config::VolumeCtrl::Linear,
+            3 => config::VolumeCtrl::Log(db_range),
+            _ => {
+                set_error(format!("invalid mixer volume control: {control}"));
+                return LIBRESPOT_ERR_INVALID_ARGUMENT;
+            }
+        };
+
+        unsafe {
+            (*mixer_config).0.volume_ctrl = volume_ctrl;
+        }
+
+        LIBRESPOT_OK
+    })
+}
+
 #[repr(C)]
 pub struct Mixer(Arc<dyn mixer::Mixer>);
 
