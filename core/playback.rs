@@ -1,4 +1,4 @@
-use std::ffi::{c_char, c_uchar, CStr};
+use std::ffi::{c_char, c_uchar, CStr, CString};
 use std::os::raw::c_int;
 use std::ptr;
 use std::sync::Arc;
@@ -6,6 +6,12 @@ use std::time::Duration;
 
 use librespot::{
     core,
+    metadata::{
+        audio::{AudioFileFormat, AudioItem, UniqueFields},
+        artist::ArtistRole,
+        availability::UnavailabilityReason,
+        image::ImageSize,
+    },
     playback::{audio_backend, config, mixer, player},
 };
 use tokio::sync::mpsc::UnboundedReceiver;
@@ -400,6 +406,23 @@ pub extern "C" fn player_seek(player: *mut Player, position_ms: u32) -> c_int {
 pub struct PlayerChannel {
     receiver: UnboundedReceiver<player::PlayerEvent>,
     spotify_uris: Vec<*mut SpotifyUri>,
+    strings: Vec<CString>,
+    cover_images: Vec<PlayerCoverImage>,
+    artists: Vec<PlayerArtist>,
+    audio_files: Vec<PlayerAudioFile>,
+    alternatives: Vec<*mut SpotifyUri>,
+    album_artists: Vec<*const c_char>,
+    language: Vec<*const c_char>,
+    next_tracks: Vec<PlayerQueueTrack>,
+    previous_tracks: Vec<PlayerQueueTrack>,
+}
+
+fn vec_ptr<T>(values: &mut Vec<T>) -> *mut T {
+    if values.is_empty() {
+        ptr::null_mut()
+    } else {
+        values.as_mut_ptr()
+    }
 }
 
 fn channel_uri(
@@ -413,6 +436,279 @@ fn channel_uri(
 
     spotify_uris.push(spotify_uri);
     Some(spotify_uri)
+}
+
+fn channel_cstring(strings: &mut Vec<CString>, value: String) -> Option<*const c_char> {
+    let value = CString::new(value).ok()?;
+    let pointer = value.as_ptr();
+    strings.push(value);
+    Some(pointer)
+}
+
+fn channel_queue_track(
+    strings: &mut Vec<CString>,
+    queue_track: player::QueueTrack,
+) -> Option<PlayerQueueTrack> {
+    Some(PlayerQueueTrack {
+        uri: channel_cstring(strings, queue_track.uri)?,
+        provider: channel_cstring(strings, queue_track.provider)?,
+    })
+}
+
+fn player_image_size(size: ImageSize) -> PlayerImageSize {
+    match size {
+        ImageSize::DEFAULT => PlayerImageSize::DEFAULT,
+        ImageSize::SMALL => PlayerImageSize::SMALL,
+        ImageSize::LARGE => PlayerImageSize::LARGE,
+        ImageSize::XLARGE => PlayerImageSize::XLARGE,
+    }
+}
+
+fn player_artist_role(role: ArtistRole) -> PlayerArtistRole {
+    match role {
+        ArtistRole::ARTIST_ROLE_UNKNOWN => PlayerArtistRole::ARTIST_ROLE_UNKNOWN,
+        ArtistRole::ARTIST_ROLE_MAIN_ARTIST => PlayerArtistRole::ARTIST_ROLE_MAIN_ARTIST,
+        ArtistRole::ARTIST_ROLE_FEATURED_ARTIST => PlayerArtistRole::ARTIST_ROLE_FEATURED_ARTIST,
+        ArtistRole::ARTIST_ROLE_REMIXER => PlayerArtistRole::ARTIST_ROLE_REMIXER,
+        ArtistRole::ARTIST_ROLE_ACTOR => PlayerArtistRole::ARTIST_ROLE_ACTOR,
+        ArtistRole::ARTIST_ROLE_COMPOSER => PlayerArtistRole::ARTIST_ROLE_COMPOSER,
+        ArtistRole::ARTIST_ROLE_CONDUCTOR => PlayerArtistRole::ARTIST_ROLE_CONDUCTOR,
+        ArtistRole::ARTIST_ROLE_ORCHESTRA => PlayerArtistRole::ARTIST_ROLE_ORCHESTRA,
+    }
+}
+
+fn player_audio_file_format(format: AudioFileFormat) -> PlayerAudioFileFormat {
+    match format {
+        AudioFileFormat::OGG_VORBIS_96 => PlayerAudioFileFormat::OGG_VORBIS_96,
+        AudioFileFormat::OGG_VORBIS_160 => PlayerAudioFileFormat::OGG_VORBIS_160,
+        AudioFileFormat::OGG_VORBIS_320 => PlayerAudioFileFormat::OGG_VORBIS_320,
+        AudioFileFormat::MP3_256 => PlayerAudioFileFormat::MP3_256,
+        AudioFileFormat::MP3_320 => PlayerAudioFileFormat::MP3_320,
+        AudioFileFormat::MP3_160 => PlayerAudioFileFormat::MP3_160,
+        AudioFileFormat::MP3_96 => PlayerAudioFileFormat::MP3_96,
+        AudioFileFormat::MP3_160_ENC => PlayerAudioFileFormat::MP3_160_ENC,
+        AudioFileFormat::AAC_24 => PlayerAudioFileFormat::AAC_24,
+        AudioFileFormat::AAC_48 => PlayerAudioFileFormat::AAC_48,
+        AudioFileFormat::FLAC_FLAC => PlayerAudioFileFormat::FLAC_FLAC,
+        AudioFileFormat::XHE_AAC_24 => PlayerAudioFileFormat::XHE_AAC_24,
+        AudioFileFormat::XHE_AAC_16 => PlayerAudioFileFormat::XHE_AAC_16,
+        AudioFileFormat::XHE_AAC_12 => PlayerAudioFileFormat::XHE_AAC_12,
+        AudioFileFormat::FLAC_FLAC_24BIT => PlayerAudioFileFormat::FLAC_FLAC_24BIT,
+        AudioFileFormat::AAC_160 => PlayerAudioFileFormat::AAC_160,
+        AudioFileFormat::AAC_320 => PlayerAudioFileFormat::AAC_320,
+        AudioFileFormat::MP4_128 => PlayerAudioFileFormat::MP4_128,
+        AudioFileFormat::OTHER5 => PlayerAudioFileFormat::OTHER5,
+    }
+}
+
+fn player_unavailability_reason(
+    availability: Result<(), UnavailabilityReason>,
+) -> PlayerUnavailabilityReason {
+    match availability {
+        Ok(()) => PlayerUnavailabilityReason::NONE,
+        Err(UnavailabilityReason::Blacklisted) => PlayerUnavailabilityReason::BLACKLISTED,
+        Err(UnavailabilityReason::Embargo) => PlayerUnavailabilityReason::EMBARGO,
+        Err(UnavailabilityReason::NoData) => PlayerUnavailabilityReason::NO_DATA,
+        Err(UnavailabilityReason::NotWhitelisted) => PlayerUnavailabilityReason::NOT_WHITELISTED,
+    }
+}
+
+fn channel_unique_fields(
+    channel: &mut PlayerChannel,
+    unique_fields: UniqueFields,
+) -> Option<PlayerUniqueFields> {
+    match unique_fields {
+        UniqueFields::Track {
+            artists,
+            album,
+            album_artists,
+            popularity,
+            number,
+            disc_number,
+        } => {
+            let album = channel_cstring(&mut channel.strings, album)?;
+
+            for artist in artists.0 {
+                let id = channel_uri(&mut channel.spotify_uris, artist.id)?;
+                let name = channel_cstring(&mut channel.strings, artist.name)?;
+                let role = player_artist_role(artist.role);
+                channel.artists.push(PlayerArtist { id, name, role });
+            }
+
+            for album_artist in album_artists {
+                let album_artist = channel_cstring(&mut channel.strings, album_artist)?;
+                channel.album_artists.push(album_artist);
+            }
+
+            let artists = vec_ptr(&mut channel.artists);
+            let artists_count = channel.artists.len();
+            let album_artists = vec_ptr(&mut channel.album_artists);
+            let album_artists_count = channel.album_artists.len();
+
+            Some(PlayerUniqueFields {
+                kind: PlayerUniqueFieldsKind::TRACK,
+                data: PlayerUniqueFieldsData {
+                    track: PlayerTrackFields {
+                        album,
+                        artists,
+                        artists_count,
+                        album_artists,
+                        album_artists_count,
+                        popularity,
+                        number,
+                        disc_number,
+                    },
+                },
+            })
+        }
+        UniqueFields::Local {
+            artists,
+            album,
+            album_artists,
+            number,
+            disc_number,
+            path,
+        } => {
+            let artists = match artists {
+                Some(artists) => channel_cstring(&mut channel.strings, artists)?,
+                None => ptr::null(),
+            };
+            let album = match album {
+                Some(album) => channel_cstring(&mut channel.strings, album)?,
+                None => ptr::null(),
+            };
+            let album_artists = match album_artists {
+                Some(album_artists) => channel_cstring(&mut channel.strings, album_artists)?,
+                None => ptr::null(),
+            };
+            let (has_number, number) = match number {
+                Some(number) => (true, number),
+                None => (false, 0),
+            };
+            let (has_disc_number, disc_number) = match disc_number {
+                Some(disc_number) => (true, disc_number),
+                None => (false, 0),
+            };
+            let path = channel_cstring(&mut channel.strings, path.to_str()?.to_owned())?;
+
+            Some(PlayerUniqueFields {
+                kind: PlayerUniqueFieldsKind::LOCAL,
+                data: PlayerUniqueFieldsData {
+                    local: PlayerLocalFields {
+                        artists,
+                        album,
+                        album_artists,
+                        has_number,
+                        number,
+                        has_disc_number,
+                        disc_number,
+                        path,
+                    },
+                },
+            })
+        }
+        UniqueFields::Episode {
+            description,
+            publish_time,
+            show_name,
+        } => {
+            let description = channel_cstring(&mut channel.strings, description)?;
+            let publish_time_ms = publish_time.as_timestamp_ms();
+            let show_name = channel_cstring(&mut channel.strings, show_name)?;
+
+            Some(PlayerUniqueFields {
+                kind: PlayerUniqueFieldsKind::EPISODE,
+                data: PlayerUniqueFieldsData {
+                    episode: PlayerEpisodeFields {
+                        description,
+                        publish_time_ms,
+                        show_name,
+                    },
+                },
+            })
+        }
+    }
+}
+
+fn channel_audio_item(channel: &mut PlayerChannel, audio_item: AudioItem) -> Option<PlayerAudioItem> {
+    let track_id = channel_uri(&mut channel.spotify_uris, audio_item.track_id)?;
+    let uri = channel_cstring(&mut channel.strings, audio_item.uri)?;
+    let name = channel_cstring(&mut channel.strings, audio_item.name)?;
+
+    for cover in audio_item.covers {
+        let url = channel_cstring(&mut channel.strings, cover.url)?;
+        channel.cover_images.push(PlayerCoverImage {
+            url,
+            size: player_image_size(cover.size),
+            width: cover.width,
+            height: cover.height,
+        });
+    }
+
+    for language in audio_item.language {
+        let language = channel_cstring(&mut channel.strings, language)?;
+        channel.language.push(language);
+    }
+
+    for (format, file_id) in audio_item.files.0 {
+        channel.audio_files.push(PlayerAudioFile {
+            format: player_audio_file_format(format),
+            file_id: file_id.0,
+        });
+    }
+
+    if let Some(alternatives) = audio_item.alternatives {
+        for alternative in alternatives.0 {
+            let alternative = channel_uri(&mut channel.spotify_uris, alternative)?;
+            channel.alternatives.push(alternative);
+        }
+    }
+
+    let availability = player_unavailability_reason(audio_item.availability);
+    let unique_fields = channel_unique_fields(channel, audio_item.unique_fields)?;
+
+    let covers = vec_ptr(&mut channel.cover_images);
+    let covers_count = channel.cover_images.len();
+    let language = vec_ptr(&mut channel.language);
+    let language_count = channel.language.len();
+    let files = vec_ptr(&mut channel.audio_files);
+    let files_count = channel.audio_files.len();
+    let alternatives = vec_ptr(&mut channel.alternatives);
+    let alternatives_count = channel.alternatives.len();
+
+    Some(PlayerAudioItem {
+        track_id,
+        uri,
+        name,
+        duration_ms: audio_item.duration_ms,
+        is_explicit: audio_item.is_explicit,
+        covers,
+        covers_count,
+        language,
+        language_count,
+        files,
+        files_count,
+        alternatives,
+        alternatives_count,
+        availability,
+        unique_fields,
+    })
+}
+
+fn channel_clear(channel: &mut PlayerChannel) {
+    for spotify_uri in channel.spotify_uris.drain(..) {
+        spotify_uri_free(spotify_uri);
+    }
+
+    channel.strings.clear();
+    channel.cover_images.clear();
+    channel.artists.clear();
+    channel.audio_files.clear();
+    channel.alternatives.clear();
+    channel.album_artists.clear();
+    channel.language.clear();
+    channel.next_tracks.clear();
+    channel.previous_tracks.clear();
 }
 
 #[no_mangle]
@@ -430,6 +726,15 @@ pub extern "C" fn player_channel_get(player: *mut Player) -> *mut PlayerChannel 
         Box::into_raw(Box::new(PlayerChannel {
             receiver,
             spotify_uris: Vec::new(),
+            strings: Vec::new(),
+            cover_images: Vec::new(),
+            artists: Vec::new(),
+            audio_files: Vec::new(),
+            alternatives: Vec::new(),
+            album_artists: Vec::new(),
+            language: Vec::new(),
+            next_tracks: Vec::new(),
+            previous_tracks: Vec::new(),
         }))
     })
 }
@@ -442,12 +747,8 @@ pub extern "C" fn player_channel_free(player_channel: *mut PlayerChannel) {
         }
 
         unsafe {
-            let player_channel = Box::from_raw(player_channel);
-
-            for spotify_uri in player_channel.spotify_uris.iter().copied() {
-                spotify_uri_free(spotify_uri);
-            }
-
+            let mut player_channel = Box::from_raw(player_channel);
+            channel_clear(&mut player_channel);
             drop(player_channel);
         }
     });
@@ -467,17 +768,14 @@ pub extern "C" fn player_channel_poll(
         }
 
         let player_channel = unsafe { &mut *player_channel };
-
-        for spotify_uri in player_channel.spotify_uris.drain(..) {
-            spotify_uri_free(spotify_uri);
-        }
+        channel_clear(player_channel);
 
         if player_event.is_null() {
             set_error("player_event must not be NULL");
             return false;
         }
 
-        loop {
+        'events: loop {
             let event = match player_channel.receiver.try_recv() {
                 Ok(event) => event,
                 Err(_) => {
@@ -502,8 +800,11 @@ pub extern "C" fn player_channel_poll(
                     play_request_id,
                     track_id,
                 } => {
-                    let Some(track_id) = channel_uri(&mut player_channel.spotify_uris, track_id) else {
-                        continue;
+                    let Some(track_id) =
+                        channel_uri(&mut player_channel.spotify_uris, track_id)
+                    else {
+                        channel_clear(player_channel);
+                        continue 'events;
                     };
 
                     unsafe {
@@ -521,8 +822,11 @@ pub extern "C" fn player_channel_poll(
                     track_id,
                     position_ms,
                 } => {
-                    let Some(track_id) = channel_uri(&mut player_channel.spotify_uris, track_id) else {
-                        continue;
+                    let Some(track_id) =
+                        channel_uri(&mut player_channel.spotify_uris, track_id)
+                    else {
+                        channel_clear(player_channel);
+                        continue 'events;
                     };
 
                     unsafe {
@@ -537,8 +841,11 @@ pub extern "C" fn player_channel_poll(
                 }
 
                 player::PlayerEvent::Preloading { track_id } => {
-                    let Some(track_id) = channel_uri(&mut player_channel.spotify_uris, track_id) else {
-                        continue;
+                    let Some(track_id) =
+                        channel_uri(&mut player_channel.spotify_uris, track_id)
+                    else {
+                        channel_clear(player_channel);
+                        continue 'events;
                     };
 
                     unsafe {
@@ -553,8 +860,11 @@ pub extern "C" fn player_channel_poll(
                     track_id,
                     position_ms,
                 } => {
-                    let Some(track_id) = channel_uri(&mut player_channel.spotify_uris, track_id) else {
-                        continue;
+                    let Some(track_id) =
+                        channel_uri(&mut player_channel.spotify_uris, track_id)
+                    else {
+                        channel_clear(player_channel);
+                        continue 'events;
                     };
 
                     unsafe {
@@ -573,8 +883,11 @@ pub extern "C" fn player_channel_poll(
                     track_id,
                     position_ms,
                 } => {
-                    let Some(track_id) = channel_uri(&mut player_channel.spotify_uris, track_id) else {
-                        continue;
+                    let Some(track_id) =
+                        channel_uri(&mut player_channel.spotify_uris, track_id)
+                    else {
+                        channel_clear(player_channel);
+                        continue 'events;
                     };
 
                     unsafe {
@@ -592,8 +905,11 @@ pub extern "C" fn player_channel_poll(
                     play_request_id,
                     track_id,
                 } => {
-                    let Some(track_id) = channel_uri(&mut player_channel.spotify_uris, track_id) else {
-                        continue;
+                    let Some(track_id) =
+                        channel_uri(&mut player_channel.spotify_uris, track_id)
+                    else {
+                        channel_clear(player_channel);
+                        continue 'events;
                     };
 
                     unsafe {
@@ -612,8 +928,11 @@ pub extern "C" fn player_channel_poll(
                     play_request_id,
                     track_id,
                 } => {
-                    let Some(track_id) = channel_uri(&mut player_channel.spotify_uris, track_id) else {
-                        continue;
+                    let Some(track_id) =
+                        channel_uri(&mut player_channel.spotify_uris, track_id)
+                    else {
+                        channel_clear(player_channel);
+                        continue 'events;
                     };
 
                     unsafe {
@@ -630,8 +949,11 @@ pub extern "C" fn player_channel_poll(
                     play_request_id,
                     track_id,
                 } => {
-                    let Some(track_id) = channel_uri(&mut player_channel.spotify_uris, track_id) else {
-                        continue;
+                    let Some(track_id) =
+                        channel_uri(&mut player_channel.spotify_uris, track_id)
+                    else {
+                        channel_clear(player_channel);
+                        continue 'events;
                     };
 
                     unsafe {
@@ -657,8 +979,11 @@ pub extern "C" fn player_channel_poll(
                     track_id,
                     position_ms,
                 } => {
-                    let Some(track_id) = channel_uri(&mut player_channel.spotify_uris, track_id) else {
-                        continue;
+                    let Some(track_id) =
+                        channel_uri(&mut player_channel.spotify_uris, track_id)
+                    else {
+                        channel_clear(player_channel);
+                        continue 'events;
                     };
 
                     unsafe {
@@ -677,8 +1002,11 @@ pub extern "C" fn player_channel_poll(
                     track_id,
                     position_ms,
                 } => {
-                    let Some(track_id) = channel_uri(&mut player_channel.spotify_uris, track_id) else {
-                        continue;
+                    let Some(track_id) =
+                        channel_uri(&mut player_channel.spotify_uris, track_id)
+                    else {
+                        channel_clear(player_channel);
+                        continue 'events;
                     };
 
                     unsafe {
@@ -697,8 +1025,11 @@ pub extern "C" fn player_channel_poll(
                     track_id,
                     position_ms,
                 } => {
-                    let Some(track_id) = channel_uri(&mut player_channel.spotify_uris, track_id) else {
-                        continue;
+                    let Some(track_id) =
+                        channel_uri(&mut player_channel.spotify_uris, track_id)
+                    else {
+                        channel_clear(player_channel);
+                        continue 'events;
                     };
 
                     unsafe {
@@ -712,52 +1043,398 @@ pub extern "C" fn player_channel_poll(
                     true
                 }
 
-                player::PlayerEvent::TrackChanged { .. } => {
+                player::PlayerEvent::TrackChanged { audio_item } => {
+                    let Some(audio_item) = channel_audio_item(player_channel, *audio_item) else {
+                        channel_clear(player_channel);
+                        continue 'events;
+                    };
+
                     unsafe {
                         (*player_event).event = PlayerEventType::PLAYER_EVENT_TRACK_CHANGED;
+                        (*player_event).data.track_changed = PlayerEventTrackChanged { audio_item };
                     }
                     true
                 }
 
-                player::PlayerEvent::SessionConnected { .. } => {
+                player::PlayerEvent::SessionConnected {
+                    connection_id,
+                    user_name,
+                } => {
+                    let Some(connection_id) =
+                        channel_cstring(&mut player_channel.strings, connection_id)
+                    else {
+                        channel_clear(player_channel);
+                        continue 'events;
+                    };
+                    let Some(user_name) =
+                        channel_cstring(&mut player_channel.strings, user_name)
+                    else {
+                        channel_clear(player_channel);
+                        continue 'events;
+                    };
+
                     unsafe {
                         (*player_event).event = PlayerEventType::PLAYER_EVENT_SESSION_CONNECTED;
+                        (*player_event).data.session_connected = PlayerEventSessionConnected {
+                            connection_id,
+                            user_name,
+                        };
                     }
                     true
                 }
 
-                player::PlayerEvent::SessionDisconnected { .. } => {
+                player::PlayerEvent::SessionDisconnected {
+                    connection_id,
+                    user_name,
+                } => {
+                    let Some(connection_id) =
+                        channel_cstring(&mut player_channel.strings, connection_id)
+                    else {
+                        channel_clear(player_channel);
+                        continue 'events;
+                    };
+                    let Some(user_name) =
+                        channel_cstring(&mut player_channel.strings, user_name)
+                    else {
+                        channel_clear(player_channel);
+                        continue 'events;
+                    };
+
                     unsafe {
                         (*player_event).event = PlayerEventType::PLAYER_EVENT_SESSION_DISCONNECTED;
+                        (*player_event).data.session_disconnected = PlayerEventSessionDisconnected {
+                            connection_id,
+                            user_name,
+                        };
                     }
                     true
                 }
 
-                player::PlayerEvent::SessionClientChanged { .. } => {
+                player::PlayerEvent::SessionClientChanged {
+                    client_id,
+                    client_name,
+                    client_brand_name,
+                    client_model_name,
+                } => {
+                    let Some(client_id) =
+                        channel_cstring(&mut player_channel.strings, client_id)
+                    else {
+                        channel_clear(player_channel);
+                        continue 'events;
+                    };
+                    let Some(client_name) =
+                        channel_cstring(&mut player_channel.strings, client_name)
+                    else {
+                        channel_clear(player_channel);
+                        continue 'events;
+                    };
+                    let Some(client_brand_name) =
+                        channel_cstring(&mut player_channel.strings, client_brand_name)
+                    else {
+                        channel_clear(player_channel);
+                        continue 'events;
+                    };
+                    let Some(client_model_name) =
+                        channel_cstring(&mut player_channel.strings, client_model_name)
+                    else {
+                        channel_clear(player_channel);
+                        continue 'events;
+                    };
+
                     unsafe {
                         (*player_event).event = PlayerEventType::PLAYER_EVENT_SESSION_CLIENT_CHANGED;
+                        (*player_event).data.session_client_changed =
+                            PlayerEventSessionClientChanged {
+                                client_id,
+                                client_name,
+                                client_brand_name,
+                                client_model_name,
+                            };
                     }
                     true
                 }
 
-                player::PlayerEvent::ShuffleChanged { .. } => {
+                player::PlayerEvent::ShuffleChanged { shuffle } => {
                     unsafe {
                         (*player_event).event = PlayerEventType::PLAYER_EVENT_SHUFFLE_CHANGED;
+                        (*player_event).data.shuffle_changed = PlayerEventShuffleChanged { shuffle };
                     }
                     true
                 }
 
-                player::PlayerEvent::RepeatChanged { .. } => {
+                player::PlayerEvent::RepeatChanged { context, track } => {
                     unsafe {
                         (*player_event).event = PlayerEventType::PLAYER_EVENT_REPEAT_CHANGED;
+                        (*player_event).data.repeat_changed = PlayerEventRepeatChanged {
+                            context,
+                            track,
+                        };
                     }
                     true
                 }
 
-                _ => continue,
+                player::PlayerEvent::AutoPlayChanged { auto_play } => {
+                    unsafe {
+                        (*player_event).event = PlayerEventType::PLAYER_EVENT_AUTO_PLAY_CHANGED;
+                        (*player_event).data.auto_play_changed = PlayerEventAutoPlayChanged {
+                            auto_play,
+                        };
+                    }
+                    true
+                }
+
+                player::PlayerEvent::FilterExplicitContentChanged { filter } => {
+                    unsafe {
+                        (*player_event).event =
+                            PlayerEventType::PLAYER_EVENT_FILTER_EXPLICIT_CONTENT_CHANGED;
+                        (*player_event).data.filter_explicit_content_changed =
+                            PlayerEventFilterExplicitContentChanged { filter };
+                    }
+                    true
+                }
+
+                player::PlayerEvent::SetQueue {
+                    context_uri,
+                    current_track,
+                    next_tracks,
+                    prev_tracks,
+                } => {
+                    let Some(context_uri) =
+                        channel_cstring(&mut player_channel.strings, context_uri)
+                    else {
+                        channel_clear(player_channel);
+                        continue 'events;
+                    };
+                    let (has_current_track, current_track) = match current_track {
+                        Some(current_track) => {
+                            let Some(current_track) =
+                                channel_queue_track(&mut player_channel.strings, current_track)
+                            else {
+                                channel_clear(player_channel);
+                                continue 'events;
+                            };
+                            (true, current_track)
+                        }
+                        None => (
+                            false,
+                            PlayerQueueTrack {
+                                uri: ptr::null(),
+                                provider: ptr::null(),
+                            },
+                        ),
+                    };
+
+                    for next_track in next_tracks {
+                        let Some(next_track) =
+                            channel_queue_track(&mut player_channel.strings, next_track)
+                        else {
+                            channel_clear(player_channel);
+                            continue 'events;
+                        };
+                        player_channel.next_tracks.push(next_track);
+                    }
+
+                    for previous_track in prev_tracks {
+                        let Some(previous_track) =
+                            channel_queue_track(&mut player_channel.strings, previous_track)
+                        else {
+                            channel_clear(player_channel);
+                            continue 'events;
+                        };
+                        player_channel.previous_tracks.push(previous_track);
+                    }
+
+                    let next_tracks = vec_ptr(&mut player_channel.next_tracks);
+                    let next_tracks_count = player_channel.next_tracks.len();
+                    let previous_tracks = vec_ptr(&mut player_channel.previous_tracks);
+                    let previous_tracks_count = player_channel.previous_tracks.len();
+
+                    unsafe {
+                        (*player_event).event = PlayerEventType::PLAYER_EVENT_SET_QUEUE;
+                        (*player_event).data.set_queue = PlayerEventSetQueue {
+                            context_uri,
+                            has_current_track,
+                            current_track,
+                            next_tracks,
+                            next_tracks_count,
+                            previous_tracks,
+                            previous_tracks_count,
+                        };
+                    }
+                    true
+                }
             };
         }
     })
+}
+
+#[repr(C)]
+#[derive(Clone, Copy)]
+#[allow(non_camel_case_types)]
+pub enum PlayerImageSize {
+    DEFAULT = 0,
+    SMALL = 1,
+    LARGE = 2,
+    XLARGE = 3,
+}
+
+#[repr(C)]
+#[derive(Clone, Copy)]
+pub struct PlayerCoverImage {
+    pub url: *const c_char,
+    pub size: PlayerImageSize,
+    pub width: i32,
+    pub height: i32,
+}
+
+#[repr(C)]
+#[derive(Clone, Copy)]
+#[allow(non_camel_case_types)]
+pub enum PlayerArtistRole {
+    ARTIST_ROLE_UNKNOWN = 0,
+    ARTIST_ROLE_MAIN_ARTIST = 1,
+    ARTIST_ROLE_FEATURED_ARTIST = 2,
+    ARTIST_ROLE_REMIXER = 3,
+    ARTIST_ROLE_ACTOR = 4,
+    ARTIST_ROLE_COMPOSER = 5,
+    ARTIST_ROLE_CONDUCTOR = 6,
+    ARTIST_ROLE_ORCHESTRA = 7,
+}
+
+#[repr(C)]
+#[derive(Clone, Copy)]
+pub struct PlayerArtist {
+    pub id: *mut SpotifyUri,
+    pub name: *const c_char,
+    pub role: PlayerArtistRole,
+}
+
+#[repr(C)]
+#[derive(Clone, Copy)]
+#[allow(non_camel_case_types)]
+pub enum PlayerAudioFileFormat {
+    OGG_VORBIS_96 = 0,
+    OGG_VORBIS_160 = 1,
+    OGG_VORBIS_320 = 2,
+    MP3_256 = 3,
+    MP3_320 = 4,
+    MP3_160 = 5,
+    MP3_96 = 6,
+    MP3_160_ENC = 7,
+    AAC_24 = 8,
+    AAC_48 = 9,
+    FLAC_FLAC = 10,
+    XHE_AAC_24 = 11,
+    XHE_AAC_16 = 12,
+    XHE_AAC_12 = 13,
+    FLAC_FLAC_24BIT = 14,
+    AAC_160 = 15,
+    AAC_320 = 16,
+    MP4_128 = 17,
+    OTHER5 = 18,
+}
+
+#[repr(C)]
+#[derive(Clone, Copy)]
+pub struct PlayerAudioFile {
+    pub format: PlayerAudioFileFormat,
+    pub file_id: [u8; 20],
+}
+
+#[repr(C)]
+#[derive(Clone, Copy)]
+#[allow(non_camel_case_types)]
+pub enum PlayerUnavailabilityReason {
+    NONE = -1,
+    BLACKLISTED = 0,
+    EMBARGO = 1,
+    NO_DATA = 2,
+    NOT_WHITELISTED = 3,
+}
+
+#[repr(C)]
+#[derive(Clone, Copy)]
+#[allow(non_camel_case_types)]
+pub enum PlayerUniqueFieldsKind {
+    TRACK = 0,
+    LOCAL = 1,
+    EPISODE = 2,
+}
+
+#[repr(C)]
+#[derive(Clone, Copy)]
+pub struct PlayerTrackFields {
+    pub album: *const c_char,
+    pub artists: *mut PlayerArtist,
+    pub artists_count: usize,
+    pub album_artists: *mut *const c_char,
+    pub album_artists_count: usize,
+    pub popularity: u8,
+    pub number: u32,
+    pub disc_number: u32,
+}
+
+#[repr(C)]
+#[derive(Clone, Copy)]
+pub struct PlayerLocalFields {
+    pub artists: *const c_char,
+    pub album: *const c_char,
+    pub album_artists: *const c_char,
+    pub has_number: bool,
+    pub number: u32,
+    pub has_disc_number: bool,
+    pub disc_number: u32,
+    pub path: *const c_char,
+}
+
+#[repr(C)]
+#[derive(Clone, Copy)]
+pub struct PlayerEpisodeFields {
+    pub description: *const c_char,
+    pub publish_time_ms: i64,
+    pub show_name: *const c_char,
+}
+
+#[repr(C)]
+#[derive(Clone, Copy)]
+pub union PlayerUniqueFieldsData {
+    pub track: PlayerTrackFields,
+    pub local: PlayerLocalFields,
+    pub episode: PlayerEpisodeFields,
+}
+
+#[repr(C)]
+#[derive(Clone, Copy)]
+pub struct PlayerUniqueFields {
+    pub kind: PlayerUniqueFieldsKind,
+    pub data: PlayerUniqueFieldsData,
+}
+
+#[repr(C)]
+#[derive(Clone, Copy)]
+pub struct PlayerAudioItem {
+    pub track_id: *mut SpotifyUri,
+    pub uri: *const c_char,
+    pub name: *const c_char,
+    pub duration_ms: u32,
+    pub is_explicit: bool,
+    pub covers: *mut PlayerCoverImage,
+    pub covers_count: usize,
+    pub language: *mut *const c_char,
+    pub language_count: usize,
+    pub files: *mut PlayerAudioFile,
+    pub files_count: usize,
+    pub alternatives: *mut *mut SpotifyUri,
+    pub alternatives_count: usize,
+    pub availability: PlayerUnavailabilityReason,
+    pub unique_fields: PlayerUniqueFields,
+}
+
+#[repr(C)]
+#[derive(Clone, Copy)]
+pub struct PlayerQueueTrack {
+    pub uri: *const c_char,
+    pub provider: *const c_char,
 }
 
 #[repr(C)]
@@ -855,6 +1532,72 @@ pub struct PlayerEventSeeked {
 }
 
 #[repr(C)]
+#[derive(Clone, Copy)]
+pub struct PlayerEventTrackChanged {
+    pub audio_item: PlayerAudioItem,
+}
+
+#[repr(C)]
+#[derive(Clone, Copy)]
+pub struct PlayerEventSessionConnected {
+    pub connection_id: *const c_char,
+    pub user_name: *const c_char,
+}
+
+#[repr(C)]
+#[derive(Clone, Copy)]
+pub struct PlayerEventSessionDisconnected {
+    pub connection_id: *const c_char,
+    pub user_name: *const c_char,
+}
+
+#[repr(C)]
+#[derive(Clone, Copy)]
+pub struct PlayerEventSessionClientChanged {
+    pub client_id: *const c_char,
+    pub client_name: *const c_char,
+    pub client_brand_name: *const c_char,
+    pub client_model_name: *const c_char,
+}
+
+#[repr(C)]
+#[derive(Clone, Copy)]
+pub struct PlayerEventShuffleChanged {
+    pub shuffle: bool,
+}
+
+#[repr(C)]
+#[derive(Clone, Copy)]
+pub struct PlayerEventRepeatChanged {
+    pub context: bool,
+    pub track: bool,
+}
+
+#[repr(C)]
+#[derive(Clone, Copy)]
+pub struct PlayerEventAutoPlayChanged {
+    pub auto_play: bool,
+}
+
+#[repr(C)]
+#[derive(Clone, Copy)]
+pub struct PlayerEventFilterExplicitContentChanged {
+    pub filter: bool,
+}
+
+#[repr(C)]
+#[derive(Clone, Copy)]
+pub struct PlayerEventSetQueue {
+    pub context_uri: *const c_char,
+    pub has_current_track: bool,
+    pub current_track: PlayerQueueTrack,
+    pub next_tracks: *mut PlayerQueueTrack,
+    pub next_tracks_count: usize,
+    pub previous_tracks: *mut PlayerQueueTrack,
+    pub previous_tracks_count: usize,
+}
+
+#[repr(C)]
 pub union PlayerEventData {
     pub play_request_id_changed: PlayerEventPlayRequestIdChanged,
     pub stopped: PlayerEventStopped,
@@ -869,6 +1612,15 @@ pub union PlayerEventData {
     pub position_correction: PlayerEventPositionCorrection,
     pub position_changed: PlayerEventPositionChanged,
     pub seeked: PlayerEventSeeked,
+    pub track_changed: PlayerEventTrackChanged,
+    pub session_connected: PlayerEventSessionConnected,
+    pub session_disconnected: PlayerEventSessionDisconnected,
+    pub session_client_changed: PlayerEventSessionClientChanged,
+    pub shuffle_changed: PlayerEventShuffleChanged,
+    pub repeat_changed: PlayerEventRepeatChanged,
+    pub auto_play_changed: PlayerEventAutoPlayChanged,
+    pub filter_explicit_content_changed: PlayerEventFilterExplicitContentChanged,
+    pub set_queue: PlayerEventSetQueue,
 }
 
 #[repr(C)]
@@ -894,6 +1646,9 @@ pub enum PlayerEventType {
     PLAYER_EVENT_SESSION_CLIENT_CHANGED,
     PLAYER_EVENT_SHUFFLE_CHANGED,
     PLAYER_EVENT_REPEAT_CHANGED,
+    PLAYER_EVENT_AUTO_PLAY_CHANGED,
+    PLAYER_EVENT_FILTER_EXPLICIT_CONTENT_CHANGED,
+    PLAYER_EVENT_SET_QUEUE,
 }
 
 #[repr(C)]

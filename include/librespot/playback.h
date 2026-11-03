@@ -3,6 +3,7 @@
 
 #include <librespot/core.h>
 #include <librespot/error.h>
+#include <stddef.h>
 #include <stdint.h>
 #include <stdbool.h>
 
@@ -54,8 +55,145 @@ typedef enum {
     PLAYER_EVENT_SESSION_DISCONNECTED,
     PLAYER_EVENT_SESSION_CLIENT_CHANGED,
     PLAYER_EVENT_SHUFFLE_CHANGED,
-    PLAYER_EVENT_REPEAT_CHANGED
+    PLAYER_EVENT_REPEAT_CHANGED,
+    PLAYER_EVENT_AUTO_PLAY_CHANGED,
+    PLAYER_EVENT_FILTER_EXPLICIT_CONTENT_CHANGED,
+    PLAYER_EVENT_SET_QUEUE
 } PlayerEventType;
+
+typedef enum {
+    PLAYER_IMAGE_SIZE_DEFAULT = 0,
+    PLAYER_IMAGE_SIZE_SMALL = 1,
+    PLAYER_IMAGE_SIZE_LARGE = 2,
+    PLAYER_IMAGE_SIZE_XLARGE = 3
+} PlayerImageSize;
+
+typedef struct {
+    const char* url;
+    PlayerImageSize size;
+    int32_t width;
+    int32_t height;
+} PlayerCoverImage;
+
+typedef enum {
+    PLAYER_ARTIST_ROLE_UNKNOWN = 0,
+    PLAYER_ARTIST_ROLE_MAIN_ARTIST = 1,
+    PLAYER_ARTIST_ROLE_FEATURED_ARTIST = 2,
+    PLAYER_ARTIST_ROLE_REMIXER = 3,
+    PLAYER_ARTIST_ROLE_ACTOR = 4,
+    PLAYER_ARTIST_ROLE_COMPOSER = 5,
+    PLAYER_ARTIST_ROLE_CONDUCTOR = 6,
+    PLAYER_ARTIST_ROLE_ORCHESTRA = 7
+} PlayerArtistRole;
+
+typedef struct {
+    SpotifyUri* id;
+    const char* name;
+    PlayerArtistRole role;
+} PlayerArtist;
+
+typedef enum {
+    PLAYER_AUDIO_FILE_FORMAT_OGG_VORBIS_96 = 0,
+    PLAYER_AUDIO_FILE_FORMAT_OGG_VORBIS_160 = 1,
+    PLAYER_AUDIO_FILE_FORMAT_OGG_VORBIS_320 = 2,
+    PLAYER_AUDIO_FILE_FORMAT_MP3_256 = 3,
+    PLAYER_AUDIO_FILE_FORMAT_MP3_320 = 4,
+    PLAYER_AUDIO_FILE_FORMAT_MP3_160 = 5,
+    PLAYER_AUDIO_FILE_FORMAT_MP3_96 = 6,
+    PLAYER_AUDIO_FILE_FORMAT_MP3_160_ENC = 7,
+    PLAYER_AUDIO_FILE_FORMAT_AAC_24 = 8,
+    PLAYER_AUDIO_FILE_FORMAT_AAC_48 = 9,
+    PLAYER_AUDIO_FILE_FORMAT_FLAC_FLAC = 10,
+    PLAYER_AUDIO_FILE_FORMAT_XHE_AAC_24 = 11,
+    PLAYER_AUDIO_FILE_FORMAT_XHE_AAC_16 = 12,
+    PLAYER_AUDIO_FILE_FORMAT_XHE_AAC_12 = 13,
+    PLAYER_AUDIO_FILE_FORMAT_FLAC_FLAC_24BIT = 14,
+    PLAYER_AUDIO_FILE_FORMAT_AAC_160 = 15,
+    PLAYER_AUDIO_FILE_FORMAT_AAC_320 = 16,
+    PLAYER_AUDIO_FILE_FORMAT_MP4_128 = 17,
+    PLAYER_AUDIO_FILE_FORMAT_OTHER5 = 18
+} PlayerAudioFileFormat;
+
+typedef struct {
+    PlayerAudioFileFormat format;
+    uint8_t file_id[20];
+} PlayerAudioFile;
+
+typedef enum {
+    PLAYER_UNAVAILABILITY_REASON_NONE = -1,
+    PLAYER_UNAVAILABILITY_REASON_BLACKLISTED = 0,
+    PLAYER_UNAVAILABILITY_REASON_EMBARGO = 1,
+    PLAYER_UNAVAILABILITY_REASON_NO_DATA = 2,
+    PLAYER_UNAVAILABILITY_REASON_NOT_WHITELISTED = 3
+} PlayerUnavailabilityReason;
+
+typedef enum {
+    PLAYER_UNIQUE_FIELDS_TRACK = 0,
+    PLAYER_UNIQUE_FIELDS_LOCAL = 1,
+    PLAYER_UNIQUE_FIELDS_EPISODE = 2
+} PlayerUniqueFieldsKind;
+
+typedef struct {
+    const char* album;
+    PlayerArtist* artists;
+    size_t artists_count;
+    const char** album_artists;
+    size_t album_artists_count;
+    uint8_t popularity;
+    uint32_t number;
+    uint32_t disc_number;
+} PlayerTrackFields;
+
+typedef struct {
+    const char* artists;
+    const char* album;
+    const char* album_artists;
+    bool has_number;
+    uint32_t number;
+    bool has_disc_number;
+    uint32_t disc_number;
+    const char* path;
+} PlayerLocalFields;
+
+typedef struct {
+    const char* description;
+    int64_t publish_time_ms;
+    const char* show_name;
+} PlayerEpisodeFields;
+
+typedef union {
+    PlayerTrackFields track;
+    PlayerLocalFields local;
+    PlayerEpisodeFields episode;
+} PlayerUniqueFieldsData;
+
+typedef struct {
+    PlayerUniqueFieldsKind kind;
+    PlayerUniqueFieldsData data;
+} PlayerUniqueFields;
+
+typedef struct {
+    SpotifyUri* track_id;
+    const char* uri;
+    const char* name;
+    uint32_t duration_ms;
+    bool is_explicit;
+    PlayerCoverImage* covers;
+    size_t covers_count;
+    const char** language;
+    size_t language_count;
+    PlayerAudioFile* files;
+    size_t files_count;
+    SpotifyUri** alternatives;
+    size_t alternatives_count;
+    PlayerUnavailabilityReason availability;
+    PlayerUniqueFields unique_fields;
+} PlayerAudioItem;
+
+typedef struct {
+    const char* uri;
+    const char* provider;
+} PlayerQueueTrack;
 
 typedef struct {
     uint64_t play_request_id;
@@ -125,17 +263,53 @@ typedef struct {
     uint32_t position_ms;
 } PlayerEventSeeked;
 
-typedef struct {} PlayerEventTrackChanged;
+typedef struct {
+    PlayerAudioItem audio_item;
+} PlayerEventTrackChanged;
 
-typedef struct {} PlayerEventSessionConnected;
+typedef struct {
+    const char* connection_id;
+    const char* user_name;
+} PlayerEventSessionConnected;
 
-typedef struct {} PlayerEventSessionDisconnected;
+typedef struct {
+    const char* connection_id;
+    const char* user_name;
+} PlayerEventSessionDisconnected;
 
-typedef struct {} PlayerEventSessionClientChanged;
+typedef struct {
+    const char* client_id;
+    const char* client_name;
+    const char* client_brand_name;
+    const char* client_model_name;
+} PlayerEventSessionClientChanged;
 
-typedef struct {} PlayerEventShuffleChanged;
+typedef struct {
+    bool shuffle;
+} PlayerEventShuffleChanged;
 
-typedef struct {} PlayerEventRepeatChanged;
+typedef struct {
+    bool context;
+    bool track;
+} PlayerEventRepeatChanged;
+
+typedef struct {
+    bool auto_play;
+} PlayerEventAutoPlayChanged;
+
+typedef struct {
+    bool filter;
+} PlayerEventFilterExplicitContentChanged;
+
+typedef struct {
+    const char* context_uri;
+    bool has_current_track;
+    PlayerQueueTrack current_track;
+    PlayerQueueTrack* next_tracks;
+    size_t next_tracks_count;
+    PlayerQueueTrack* previous_tracks;
+    size_t previous_tracks_count;
+} PlayerEventSetQueue;
 
 typedef union {
     PlayerEventPlayRequestIdChanged play_request_id_changed;
@@ -157,6 +331,9 @@ typedef union {
     PlayerEventSessionClientChanged session_client_changed;
     PlayerEventShuffleChanged shuffle_changed;
     PlayerEventRepeatChanged repeat_changed;
+    PlayerEventAutoPlayChanged auto_play_changed;
+    PlayerEventFilterExplicitContentChanged filter_explicit_content_changed;
+    PlayerEventSetQueue set_queue;
 } PlayerEventData;
 
 typedef struct {
