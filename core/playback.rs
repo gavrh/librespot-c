@@ -589,7 +589,7 @@ fn channel_unique_fields(
                 Some(disc_number) => (true, disc_number),
                 None => (false, 0),
             };
-            let path = channel_cstring(&mut channel.strings, path.to_str()?.to_owned())?;
+            let path = channel_cstring(&mut channel.strings, path.to_string_lossy().into_owned())?;
 
             Some(PlayerUniqueFields {
                 kind: PlayerUniqueFieldsKind::LOCAL,
