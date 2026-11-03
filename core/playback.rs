@@ -399,16 +399,20 @@ pub extern "C" fn player_seek(player: *mut Player, position_ms: u32) -> c_int {
 #[repr(C)]
 pub struct PlayerChannel {
     receiver: UnboundedReceiver<player::PlayerEvent>,
-    track_ids: Vec<*mut SpotifyUri>,
+    spotify_uris: Vec<*mut SpotifyUri>,
 }
 
-fn channel_track_id(
-    track_ids: &mut Vec<*mut SpotifyUri>,
-    track_id: core::SpotifyUri,
-) -> *mut SpotifyUri {
-    let track_id = spotify_uri_new_internal(track_id);
-    track_ids.push(track_id);
-    track_id
+fn channel_uri(
+    spotify_uris: &mut Vec<*mut SpotifyUri>,
+    spotify_uri: core::SpotifyUri,
+) -> Option<*mut SpotifyUri> {
+    let spotify_uri = spotify_uri_new_internal(spotify_uri);
+    if spotify_uri.is_null() {
+        return None;
+    }
+
+    spotify_uris.push(spotify_uri);
+    Some(spotify_uri)
 }
 
 #[no_mangle]
@@ -425,7 +429,7 @@ pub extern "C" fn player_channel_get(player: *mut Player) -> *mut PlayerChannel 
 
         Box::into_raw(Box::new(PlayerChannel {
             receiver,
-            track_ids: Vec::new(),
+            spotify_uris: Vec::new(),
         }))
     })
 }
@@ -440,8 +444,8 @@ pub extern "C" fn player_channel_free(player_channel: *mut PlayerChannel) {
         unsafe {
             let player_channel = Box::from_raw(player_channel);
 
-            for track_id in player_channel.track_ids.iter().copied() {
-                spotify_uri_free(track_id);
+            for spotify_uri in player_channel.spotify_uris.iter().copied() {
+                spotify_uri_free(spotify_uri);
             }
 
             drop(player_channel);
@@ -461,15 +465,16 @@ pub extern "C" fn player_channel_poll(
             set_error("player_channel must not be NULL");
             return false;
         }
-        if player_event.is_null() {
-            set_error("player_event must not be NULL");
-            return false;
-        }
 
         let player_channel = unsafe { &mut *player_channel };
 
-        for track_id in player_channel.track_ids.drain(..) {
-            spotify_uri_free(track_id);
+        for spotify_uri in player_channel.spotify_uris.drain(..) {
+            spotify_uri_free(spotify_uri);
+        }
+
+        if player_event.is_null() {
+            set_error("player_event must not be NULL");
+            return false;
         }
 
         loop {
@@ -497,7 +502,9 @@ pub extern "C" fn player_channel_poll(
                     play_request_id,
                     track_id,
                 } => {
-                    let track_id = channel_track_id(&mut player_channel.track_ids, track_id);
+                    let Some(track_id) = channel_uri(&mut player_channel.spotify_uris, track_id) else {
+                        continue;
+                    };
 
                     unsafe {
                         (*player_event).event = PlayerEventType::PLAYER_EVENT_STOPPED;
@@ -514,7 +521,9 @@ pub extern "C" fn player_channel_poll(
                     track_id,
                     position_ms,
                 } => {
-                    let track_id = channel_track_id(&mut player_channel.track_ids, track_id);
+                    let Some(track_id) = channel_uri(&mut player_channel.spotify_uris, track_id) else {
+                        continue;
+                    };
 
                     unsafe {
                         (*player_event).event = PlayerEventType::PLAYER_EVENT_LOADING;
@@ -528,7 +537,9 @@ pub extern "C" fn player_channel_poll(
                 }
 
                 player::PlayerEvent::Preloading { track_id } => {
-                    let track_id = channel_track_id(&mut player_channel.track_ids, track_id);
+                    let Some(track_id) = channel_uri(&mut player_channel.spotify_uris, track_id) else {
+                        continue;
+                    };
 
                     unsafe {
                         (*player_event).event = PlayerEventType::PLAYER_EVENT_PRELOADING;
@@ -542,7 +553,9 @@ pub extern "C" fn player_channel_poll(
                     track_id,
                     position_ms,
                 } => {
-                    let track_id = channel_track_id(&mut player_channel.track_ids, track_id);
+                    let Some(track_id) = channel_uri(&mut player_channel.spotify_uris, track_id) else {
+                        continue;
+                    };
 
                     unsafe {
                         (*player_event).event = PlayerEventType::PLAYER_EVENT_PLAYING;
@@ -560,7 +573,9 @@ pub extern "C" fn player_channel_poll(
                     track_id,
                     position_ms,
                 } => {
-                    let track_id = channel_track_id(&mut player_channel.track_ids, track_id);
+                    let Some(track_id) = channel_uri(&mut player_channel.spotify_uris, track_id) else {
+                        continue;
+                    };
 
                     unsafe {
                         (*player_event).event = PlayerEventType::PLAYER_EVENT_PAUSED;
@@ -577,7 +592,9 @@ pub extern "C" fn player_channel_poll(
                     play_request_id,
                     track_id,
                 } => {
-                    let track_id = channel_track_id(&mut player_channel.track_ids, track_id);
+                    let Some(track_id) = channel_uri(&mut player_channel.spotify_uris, track_id) else {
+                        continue;
+                    };
 
                     unsafe {
                         (*player_event).event =
@@ -595,7 +612,9 @@ pub extern "C" fn player_channel_poll(
                     play_request_id,
                     track_id,
                 } => {
-                    let track_id = channel_track_id(&mut player_channel.track_ids, track_id);
+                    let Some(track_id) = channel_uri(&mut player_channel.spotify_uris, track_id) else {
+                        continue;
+                    };
 
                     unsafe {
                         (*player_event).event = PlayerEventType::PLAYER_EVENT_END_OF_TRACK;
@@ -611,7 +630,9 @@ pub extern "C" fn player_channel_poll(
                     play_request_id,
                     track_id,
                 } => {
-                    let track_id = channel_track_id(&mut player_channel.track_ids, track_id);
+                    let Some(track_id) = channel_uri(&mut player_channel.spotify_uris, track_id) else {
+                        continue;
+                    };
 
                     unsafe {
                         (*player_event).event = PlayerEventType::PLAYER_EVENT_UNAVAILABLE;
@@ -636,7 +657,9 @@ pub extern "C" fn player_channel_poll(
                     track_id,
                     position_ms,
                 } => {
-                    let track_id = channel_track_id(&mut player_channel.track_ids, track_id);
+                    let Some(track_id) = channel_uri(&mut player_channel.spotify_uris, track_id) else {
+                        continue;
+                    };
 
                     unsafe {
                         (*player_event).event = PlayerEventType::PLAYER_EVENT_POSITION_CORRECTION;
@@ -654,7 +677,9 @@ pub extern "C" fn player_channel_poll(
                     track_id,
                     position_ms,
                 } => {
-                    let track_id = channel_track_id(&mut player_channel.track_ids, track_id);
+                    let Some(track_id) = channel_uri(&mut player_channel.spotify_uris, track_id) else {
+                        continue;
+                    };
 
                     unsafe {
                         (*player_event).event = PlayerEventType::PLAYER_EVENT_POSITION_CHANGED;
@@ -672,7 +697,9 @@ pub extern "C" fn player_channel_poll(
                     track_id,
                     position_ms,
                 } => {
-                    let track_id = channel_track_id(&mut player_channel.track_ids, track_id);
+                    let Some(track_id) = channel_uri(&mut player_channel.spotify_uris, track_id) else {
+                        continue;
+                    };
 
                     unsafe {
                         (*player_event).event = PlayerEventType::PLAYER_EVENT_SEEKED;
