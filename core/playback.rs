@@ -1,5 +1,6 @@
 use std::ffi::{c_char, c_uchar, CStr, CString};
 use std::os::raw::c_int;
+use std::path::PathBuf;
 use std::ptr;
 use std::sync::Arc;
 use std::time::Duration;
@@ -35,6 +36,24 @@ fn string_from_c<'a>(value: *const c_char, name: &str) -> Result<&'a str, c_int>
         set_error(format!("{name} is not valid UTF-8: {error}"));
         LIBRESPOT_ERR_INVALID_STRING
     })
+}
+
+fn ensure_finite(value: f64, name: &str) -> Result<(), c_int> {
+    if !value.is_finite() {
+        set_error(format!("{name} must be finite"));
+        return Err(LIBRESPOT_ERR_INVALID_ARGUMENT);
+    }
+
+    Ok(())
+}
+
+fn ensure_positive(value: f64, name: &str) -> Result<(), c_int> {
+    if !value.is_finite() || value <= 0.0 {
+        set_error(format!("{name} must be finite and greater than zero"));
+        return Err(LIBRESPOT_ERR_INVALID_ARGUMENT);
+    }
+
+    Ok(())
 }
 
 fn parse_spotify_uri(spotify_uri: *const c_char) -> Result<core::SpotifyUri, c_int> {
@@ -196,6 +215,416 @@ pub extern "C" fn player_config_free(player_config: *mut PlayerConfig) {
             drop(Box::from_raw(player_config));
         }
     });
+}
+
+#[no_mangle]
+pub extern "C" fn player_config_set_bitrate(
+    player_config: *mut PlayerConfig,
+    bitrate: c_int,
+) -> c_int {
+    ffi_status(|| {
+        clear_error();
+
+        if player_config.is_null() {
+            set_error("player_config must not be NULL");
+            return LIBRESPOT_ERR_INVALID_ARGUMENT;
+        }
+
+        let bitrate = match bitrate {
+            96 => config::Bitrate::Bitrate96,
+            160 => config::Bitrate::Bitrate160,
+            320 => config::Bitrate::Bitrate320,
+            _ => {
+                set_error(format!("invalid player bitrate: {bitrate}"));
+                return LIBRESPOT_ERR_INVALID_ARGUMENT;
+            }
+        };
+
+        unsafe {
+            (*player_config).0.bitrate = bitrate;
+        }
+
+        LIBRESPOT_OK
+    })
+}
+
+#[no_mangle]
+pub extern "C" fn player_config_set_gapless(
+    player_config: *mut PlayerConfig,
+    gapless: bool,
+) -> c_int {
+    ffi_status(|| {
+        clear_error();
+
+        if player_config.is_null() {
+            set_error("player_config must not be NULL");
+            return LIBRESPOT_ERR_INVALID_ARGUMENT;
+        }
+
+        unsafe {
+            (*player_config).0.gapless = gapless;
+        }
+
+        LIBRESPOT_OK
+    })
+}
+
+#[no_mangle]
+pub extern "C" fn player_config_set_passthrough(
+    player_config: *mut PlayerConfig,
+    passthrough: bool,
+) -> c_int {
+    ffi_status(|| {
+        clear_error();
+
+        if player_config.is_null() {
+            set_error("player_config must not be NULL");
+            return LIBRESPOT_ERR_INVALID_ARGUMENT;
+        }
+
+        unsafe {
+            (*player_config).0.passthrough = passthrough;
+        }
+
+        LIBRESPOT_OK
+    })
+}
+
+#[no_mangle]
+pub extern "C" fn player_config_set_normalisation(
+    player_config: *mut PlayerConfig,
+    normalisation: bool,
+) -> c_int {
+    ffi_status(|| {
+        clear_error();
+
+        if player_config.is_null() {
+            set_error("player_config must not be NULL");
+            return LIBRESPOT_ERR_INVALID_ARGUMENT;
+        }
+
+        unsafe {
+            (*player_config).0.normalisation = normalisation;
+        }
+
+        LIBRESPOT_OK
+    })
+}
+
+#[no_mangle]
+pub extern "C" fn player_config_set_normalisation_type(
+    player_config: *mut PlayerConfig,
+    normalisation_type: c_int,
+) -> c_int {
+    ffi_status(|| {
+        clear_error();
+
+        if player_config.is_null() {
+            set_error("player_config must not be NULL");
+            return LIBRESPOT_ERR_INVALID_ARGUMENT;
+        }
+
+        let normalisation_type = match normalisation_type {
+            0 => config::NormalisationType::Album,
+            1 => config::NormalisationType::Track,
+            2 => config::NormalisationType::Auto,
+            _ => {
+                set_error(format!(
+                    "invalid player normalisation type: {normalisation_type}"
+                ));
+                return LIBRESPOT_ERR_INVALID_ARGUMENT;
+            }
+        };
+
+        unsafe {
+            (*player_config).0.normalisation_type = normalisation_type;
+        }
+
+        LIBRESPOT_OK
+    })
+}
+
+#[no_mangle]
+pub extern "C" fn player_config_set_normalisation_method(
+    player_config: *mut PlayerConfig,
+    normalisation_method: c_int,
+) -> c_int {
+    ffi_status(|| {
+        clear_error();
+
+        if player_config.is_null() {
+            set_error("player_config must not be NULL");
+            return LIBRESPOT_ERR_INVALID_ARGUMENT;
+        }
+
+        let normalisation_method = match normalisation_method {
+            0 => config::NormalisationMethod::Basic,
+            1 => config::NormalisationMethod::Dynamic,
+            _ => {
+                set_error(format!(
+                    "invalid player normalisation method: {normalisation_method}"
+                ));
+                return LIBRESPOT_ERR_INVALID_ARGUMENT;
+            }
+        };
+
+        unsafe {
+            (*player_config).0.normalisation_method = normalisation_method;
+        }
+
+        LIBRESPOT_OK
+    })
+}
+
+#[no_mangle]
+pub extern "C" fn player_config_set_normalisation_pregain_db(
+    player_config: *mut PlayerConfig,
+    value: f64,
+) -> c_int {
+    ffi_status(|| {
+        clear_error();
+
+        if player_config.is_null() {
+            set_error("player_config must not be NULL");
+            return LIBRESPOT_ERR_INVALID_ARGUMENT;
+        }
+
+        if let Err(status) = ensure_finite(value, "normalisation_pregain_db") {
+            return status;
+        }
+
+        unsafe {
+            (*player_config).0.normalisation_pregain_db = value;
+        }
+
+        LIBRESPOT_OK
+    })
+}
+
+#[no_mangle]
+pub extern "C" fn player_config_set_normalisation_threshold_dbfs(
+    player_config: *mut PlayerConfig,
+    value: f64,
+) -> c_int {
+    ffi_status(|| {
+        clear_error();
+
+        if player_config.is_null() {
+            set_error("player_config must not be NULL");
+            return LIBRESPOT_ERR_INVALID_ARGUMENT;
+        }
+
+        if let Err(status) = ensure_finite(value, "normalisation_threshold_dbfs") {
+            return status;
+        }
+
+        unsafe {
+            (*player_config).0.normalisation_threshold_dbfs = value;
+        }
+
+        LIBRESPOT_OK
+    })
+}
+
+#[no_mangle]
+pub extern "C" fn player_config_set_normalisation_attack_cf(
+    player_config: *mut PlayerConfig,
+    value: f64,
+) -> c_int {
+    ffi_status(|| {
+        clear_error();
+
+        if player_config.is_null() {
+            set_error("player_config must not be NULL");
+            return LIBRESPOT_ERR_INVALID_ARGUMENT;
+        }
+
+        if let Err(status) = ensure_positive(value, "normalisation_attack_cf") {
+            return status;
+        }
+
+        unsafe {
+            (*player_config).0.normalisation_attack_cf = value;
+        }
+
+        LIBRESPOT_OK
+    })
+}
+
+#[no_mangle]
+pub extern "C" fn player_config_set_normalisation_release_cf(
+    player_config: *mut PlayerConfig,
+    value: f64,
+) -> c_int {
+    ffi_status(|| {
+        clear_error();
+
+        if player_config.is_null() {
+            set_error("player_config must not be NULL");
+            return LIBRESPOT_ERR_INVALID_ARGUMENT;
+        }
+
+        if let Err(status) = ensure_positive(value, "normalisation_release_cf") {
+            return status;
+        }
+
+        unsafe {
+            (*player_config).0.normalisation_release_cf = value;
+        }
+
+        LIBRESPOT_OK
+    })
+}
+
+#[no_mangle]
+pub extern "C" fn player_config_set_normalisation_knee_db(
+    player_config: *mut PlayerConfig,
+    value: f64,
+) -> c_int {
+    ffi_status(|| {
+        clear_error();
+
+        if player_config.is_null() {
+            set_error("player_config must not be NULL");
+            return LIBRESPOT_ERR_INVALID_ARGUMENT;
+        }
+
+        if let Err(status) = ensure_finite(value, "normalisation_knee_db") {
+            return status;
+        }
+
+        unsafe {
+            (*player_config).0.normalisation_knee_db = value;
+        }
+
+        LIBRESPOT_OK
+    })
+}
+
+#[no_mangle]
+pub extern "C" fn player_config_set_position_update_interval(
+    player_config: *mut PlayerConfig,
+    interval_ms: u32,
+) -> c_int {
+    ffi_status(|| {
+        clear_error();
+
+        if player_config.is_null() {
+            set_error("player_config must not be NULL");
+            return LIBRESPOT_ERR_INVALID_ARGUMENT;
+        }
+
+        unsafe {
+            (*player_config).0.position_update_interval =
+                Some(Duration::from_millis(interval_ms as u64));
+        }
+
+        LIBRESPOT_OK
+    })
+}
+
+#[no_mangle]
+pub extern "C" fn player_config_clear_position_update_interval(
+    player_config: *mut PlayerConfig,
+) -> c_int {
+    ffi_status(|| {
+        clear_error();
+
+        if player_config.is_null() {
+            set_error("player_config must not be NULL");
+            return LIBRESPOT_ERR_INVALID_ARGUMENT;
+        }
+
+        unsafe {
+            (*player_config).0.position_update_interval = None;
+        }
+
+        LIBRESPOT_OK
+    })
+}
+
+#[no_mangle]
+pub extern "C" fn player_config_add_local_file_directory(
+    player_config: *mut PlayerConfig,
+    path: *const c_char,
+) -> c_int {
+    ffi_status(|| {
+        clear_error();
+
+        if player_config.is_null() {
+            set_error("player_config must not be NULL");
+            return LIBRESPOT_ERR_INVALID_ARGUMENT;
+        }
+
+        let path = match string_from_c(path, "path") {
+            Ok(path) => path,
+            Err(status) => return status,
+        };
+
+        if path.is_empty() {
+            set_error("path must not be empty");
+            return LIBRESPOT_ERR_INVALID_ARGUMENT;
+        }
+
+        unsafe {
+            (*player_config)
+                .0
+                .local_file_directories
+                .push(PathBuf::from(path));
+        }
+
+        LIBRESPOT_OK
+    })
+}
+
+#[no_mangle]
+pub extern "C" fn player_config_clear_local_file_directories(
+    player_config: *mut PlayerConfig,
+) -> c_int {
+    ffi_status(|| {
+        clear_error();
+
+        if player_config.is_null() {
+            set_error("player_config must not be NULL");
+            return LIBRESPOT_ERR_INVALID_ARGUMENT;
+        }
+
+        unsafe {
+            (*player_config).0.local_file_directories.clear();
+        }
+
+        LIBRESPOT_OK
+    })
+}
+
+#[no_mangle]
+pub extern "C" fn player_config_set_ditherer(
+    player_config: *mut PlayerConfig,
+    ditherer: c_int,
+) -> c_int {
+    ffi_status(|| {
+        clear_error();
+
+        if player_config.is_null() {
+            set_error("player_config must not be NULL");
+            return LIBRESPOT_ERR_INVALID_ARGUMENT;
+        }
+
+        let ditherer: Option<config::DithererBuilder> = match ditherer {
+            0 => None,
+            1 => Some(config::mk_ditherer::<config::TriangularDitherer>),
+            _ => {
+                set_error(format!("invalid player ditherer: {ditherer}"));
+                return LIBRESPOT_ERR_INVALID_ARGUMENT;
+            }
+        };
+
+        unsafe {
+            (*player_config).0.ditherer = ditherer;
+        }
+
+        LIBRESPOT_OK
+    })
 }
 
 #[repr(C)]

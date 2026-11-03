@@ -25,6 +25,75 @@ typedef struct PlayerConfig PlayerConfig;
 extern PlayerConfig* player_config_default(void);
 extern void player_config_free(PlayerConfig* player_config);
 
+typedef enum {
+    PLAYER_BITRATE_96 = 96,
+    PLAYER_BITRATE_160 = 160,
+    PLAYER_BITRATE_320 = 320
+} PlayerBitrate;
+
+typedef enum {
+    PLAYER_NORMALISATION_TYPE_ALBUM = 0,
+    PLAYER_NORMALISATION_TYPE_TRACK = 1,
+    PLAYER_NORMALISATION_TYPE_AUTO = 2
+} PlayerNormalisationType;
+
+typedef enum {
+    PLAYER_NORMALISATION_METHOD_BASIC = 0,
+    PLAYER_NORMALISATION_METHOD_DYNAMIC = 1
+} PlayerNormalisationMethod;
+
+typedef enum {
+    PLAYER_DITHERER_NONE = 0,
+    PLAYER_DITHERER_TRIANGULAR = 1
+} PlayerDitherer;
+
+extern LibrespotStatus player_config_set_bitrate(PlayerConfig* player_config, PlayerBitrate bitrate);
+extern LibrespotStatus player_config_set_gapless(PlayerConfig* player_config, bool gapless);
+extern LibrespotStatus player_config_set_passthrough(PlayerConfig* player_config, bool passthrough);
+extern LibrespotStatus player_config_set_normalisation(PlayerConfig* player_config, bool normalisation);
+extern LibrespotStatus player_config_set_normalisation_type(
+    PlayerConfig* player_config,
+    PlayerNormalisationType type
+);
+extern LibrespotStatus player_config_set_normalisation_method(
+    PlayerConfig* player_config,
+    PlayerNormalisationMethod method
+);
+extern LibrespotStatus player_config_set_normalisation_pregain_db(
+    PlayerConfig* player_config,
+    double value
+);
+extern LibrespotStatus player_config_set_normalisation_threshold_dbfs(
+    PlayerConfig* player_config,
+    double value
+);
+extern LibrespotStatus player_config_set_normalisation_attack_cf(
+    PlayerConfig* player_config,
+    double value
+);
+extern LibrespotStatus player_config_set_normalisation_release_cf(
+    PlayerConfig* player_config,
+    double value
+);
+extern LibrespotStatus player_config_set_normalisation_knee_db(
+    PlayerConfig* player_config,
+    double value
+);
+extern LibrespotStatus player_config_set_position_update_interval(
+    PlayerConfig* player_config,
+    uint32_t interval_ms
+);
+extern LibrespotStatus player_config_clear_position_update_interval(PlayerConfig* player_config);
+extern LibrespotStatus player_config_add_local_file_directory(
+    PlayerConfig* player_config,
+    const char* path
+);
+extern LibrespotStatus player_config_clear_local_file_directories(PlayerConfig* player_config);
+extern LibrespotStatus player_config_set_ditherer(
+    PlayerConfig* player_config,
+    PlayerDitherer ditherer
+);
+
 typedef struct Player Player;
 extern Player* player_new(PlayerConfig* player_config, Session* session, Mixer* mixer, const char* audio_backend);
 extern void player_free(Player* player);
