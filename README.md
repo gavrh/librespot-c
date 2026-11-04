@@ -1,101 +1,145 @@
 # librespot-c
-C wrapper for the popular Rust-based [librespot](https://github.com/librespot-org/librespot) library,
-allowing you to integrate Spotify functionality into your
-C and C++ projects. This library enables easy access to
-Spotify’s streaming capabilities, including playback, authentication, and more.
+C bindings for the Rust-based [librespot](https://github.com/librespot-org/librespot) library.
+It exposes Spotify authentication, session handling, playback, and player events to C and C++ projects.
 
 ## Requirements
-- [CMake](https://cmake.org/download/) 3.12 or higher
-- [Rust & Cargo](https://doc.rust-lang.org/cargo/getting-started/installation.html)
-- A C/C++ compiler (e.g., [GCC](https://gcc.gnu.org/install/) or [Clang](https://releases.llvm.org/download.html))
 
-## Installation
+- [CMake](https://cmake.org/download/) 3.12 or newer
+- [Rust and Cargo](https://doc.rust-lang.org/cargo/getting-started/installation.html)
+- A C/C++ compiler such as GCC, Clang, or MSVC
+
+## Build
+
 ```sh
-# clone library
 git clone https://github.com/gavrh/librespot-c.git
 cd librespot-c
 
-# create make files
-mkdir build
-cd build
-cmake ..
-
-# install locally
-make
-# install globally
-sudo make install
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+cmake --build build --config Release --parallel
 ```
 
-#### Copy and Paste
-> Local Install
-> ```sh
-> git clone https:://github.com/gavrh/librspot-c.git && cd librespot-c && mkdir build && cd build && cmake .. && > > make
-> ```
-> Global Install
-> ```sh
-> git clone https:://github.com/gavrh/librspot-c.git && cd librespot-c && mkdir build && cd build && cmake .. && > > sudo make install
-> ```
+## Install
+
+```sh
+sudo cmake --install build
+```
+
+On Windows:
+
+```powershell
+cmake --install build --config Release
+```
+
+To install into a custom prefix:
+
+```sh
+cmake --install build --prefix "$HOME/.local"
+```
+
+## Use from CMake
+
+```cmake
+find_package(librespot CONFIG REQUIRED)
+
+add_executable(my_app main.c)
+target_link_libraries(my_app PRIVATE librespot)
+```
+
+If you installed to a custom prefix, pass it when configuring:
+
+```sh
+cmake -S . -B build -DCMAKE_PREFIX_PATH="$HOME/.local"
+```
 
 ## Get Started
 
 Quick Start Variables:
 | Variable | Value |
-| - | - |
-| **SPOTIFY_API_CLIENT_ID** | [ncspot's spotify client id](https://github.com/hrkfdn/ncspot/blob/master/src/authentication.rs) |
-| **REDIRECT_URI** | http://127.0.0.1:8888/login |
-| **MIXER** | softvol |
-| **BACKEND** | rodio |
-| **TRACK_ID** | [Le Festin](https://open.spotify.com/track/02JIdsrod3BYucThfUFDUX): 02JIdsrod3BYucThfUFDUX |
+| --- | --- |
+| SPOTIFY_API_CLIENT_ID | 65b708073fc0480ea92a077233ca87bd (Spotify's client id) |
+| REDIRECT_URI | http://127.0.0.1:8888/login |
+| MIXER | softvol |
+| BACKEND | rodio |
+| TRACK_URI | spotify:track:02JIdsrod3BYucThfUFDUX |
 
 ```c
-#include <librespot/oauth.h>
+#define _DEFAULT_SOURCE
+
 #include <librespot/core.h>
 #include <librespot/discovery.h>
+#include <librespot/error.h>
+#include <librespot/oauth.h>
 #include <librespot/playback.h>
-#include <stdbool.h>
 
-int main() {
+#include <stdio.h>
+#include <unistd.h>
 
-    // authenticate with spotify
-    OAuthBuilder* oauth = oauth_builder_new("SPOTIFY_API_CLIENT_ID", "REDIRECT_URI");
-    oauth_builder_auto_open(oauth);
-    // make sure you're api client is allowed the scopes you add
-    oauth_builder_add_scope(oauth, OAUTH_SCOPE_ALL);
-    OAuth* auth = oauth_build(oauth);
+int main(void) {
+    // authenticate with Spotify
+    OAuthBuilder* builder = oauth_builder_new(
+        "65b708073fc0480ea92a077233ca87bd",
+        "http://127.0.0.1:8888/login"
+    );
 
-    // create credentials and session, then connect
-    const char* access = oauth_access_token(auth);
-    Credentials* creds = credentials_new(access);
-    Session* session = session_new(session_config_default());
-    session_connect(session, creds);
+    oauth_builder_auto_open(builder);
+    oauth_builder_add_scope(builder, OAUTH_SCOPE_STREAMING);
 
-    // create mixer and player
-    Mixer* mixer = mixer_new(mixer_config_default(), "MIXER");
-    Player* player = player_new(player_config_default(), session, mixer, "BACKEND");
+    OAuth* auth = oauth_build(builder);
+    oauth_builder_free(builder);
 
-    // play song
-    player_load(player, "spotify:track:TRACK_ID", true, 0);
+    // create credentials from the access token
+    Credentials* credentials = credentials_new(oauth_access_token(auth));
 
-    // player channel and event loop
+    // create and connect a session
+    SessionConfig* session_config = session_config_default();
+    Session* session = session_new(session_config);
+    session_config_free(session_config);
+
+    session_connect(session, credentials);
+    credentials_free(credentials);
+
+    // create the mixer and player
+    MixerConfig* mixer_config = mixer_config_default();
+    Mixer* mixer = mixer_new(mixer_config, "softvol");
+    mixer_config_free(mixer_config);
+
+    PlayerConfig* player_config = player_config_default();
+    Player* player = player_new(player_config, session, mixer, "rodio");
+    player_config_free(player_config);
+
+    // load a track
+    player_load(player, "spotify:track:02JIdsrod3BYucThfUFDUX", true, 0);
+
+    // poll for player events
     PlayerChannel* channel = player_channel_get(player);
     PlayerEvent event;
-    while (true) {
-        if (player_channel_poll(channel, &event)) {
-            switch (event.event) {
-                case PLAYER_EVENT_PLAYING:
-                    // event.data.playing to access union fields
-                    break;
-                case PLAYER_EVENT_LOADING:
-                    // event.data.laoding to access union fields
-                    break;
 
-                // and so on for the other events...
+    while (session_is_valid(session)) {
+        if (!player_channel_poll(channel, &event)) {
+            usleep(10000);
+            continue;
+        }
 
-                default:
-                    break;
-            }
+        switch (event.event) {
+            case PLAYER_EVENT_PLAYING:
+                printf("Playing %s\n", spotify_uri_to_string(event.data.playing.track_id));
+                break;
+
+            case PLAYER_EVENT_END_OF_TRACK:
+                printf("End of track\n");
+                break;
+
+            default:
+                break;
         }
     }
+
+    // clean up
+    player_channel_free(channel);
+    player_free(player);
+    mixer_free(mixer);
+    session_free(session);
+    oauth_free(auth);
 
     return 0;
 }
