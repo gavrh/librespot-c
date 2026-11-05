@@ -249,10 +249,6 @@ pub(crate) fn session_clone(session: *mut Session) -> Option<core::Session> {
     unsafe { Some((*session).0.clone()) }
 }
 
-pub fn session_box(session: *mut Session) -> Box<core::Session> {
-    Box::new(session_clone(session).expect("session pointer must not be NULL"))
-}
-
 #[no_mangle]
 pub extern "C" fn session_new(session_config: *mut SessionConfig) -> *mut Session {
     ffi_guard(ptr::null_mut(), || {

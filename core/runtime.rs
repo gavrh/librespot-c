@@ -15,7 +15,3 @@ pub(crate) fn try_runtime() -> std::io::Result<&'static Runtime> {
         std::io::Error::new(std::io::ErrorKind::Other, "runtime was not initialized")
     })
 }
-
-pub fn runtime() -> &'static Runtime {
-    try_runtime().expect("failed to create Tokio runtime")
-}

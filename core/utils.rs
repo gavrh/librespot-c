@@ -139,10 +139,6 @@ impl OutputRedirect {
         }
     }
 
-    pub fn restore(mut self) {
-        self.restore_inner();
-    }
-
     fn restore_inner(&mut self) {
         #[cfg(unix)]
         {
