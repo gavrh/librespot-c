@@ -8,9 +8,21 @@ name = "respot_core"
 path = "./lib.rs"
 crate-type = ["cdylib"]
 
+[features]
+default = ["backend-rodio"]
+
+backend-rodio = ["librespot/rodio-backend"]
+backend-alsa = ["librespot/alsa-backend"]
+backend-pulseaudio = ["librespot/pulseaudio-backend"]
+backend-jack = ["librespot/jackaudio-backend"]
+backend-portaudio = ["librespot/portaudio-backend"]
+backend-sdl = ["librespot/sdl-backend"]
+backend-gstreamer = ["librespot/gstreamer-backend"]
+backend-rodiojack = ["librespot/rodiojack-backend"]
+
 [dependencies]
 libc = "0.2.170"
-librespot = { git = "https://github.com/librespot-org/librespot", branch = "dev", features = ["rodio-backend"] }
+librespot = { git = "https://github.com/librespot-org/librespot", branch = "dev", default-features = false, features = ["native-tls", "with-libmdns"] }
 tokio = { version = "1.43.0", features = ["full"] }
 tokio-stream = { version = "0.1.17", features = ["full"] }
 url = "2"

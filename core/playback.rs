@@ -22,7 +22,7 @@ use crate::core::{
 };
 use crate::error::{
     clear_error, set_error, LIBRESPOT_ERR_INVALID_ARGUMENT, LIBRESPOT_ERR_INVALID_STRING,
-    LIBRESPOT_OK,
+    LIBRESPOT_ERR_UNSUPPORTED, LIBRESPOT_OK,
 };
 use crate::ffi::{ffi_guard, ffi_status};
 
@@ -69,6 +69,49 @@ fn parse_spotify_uri(spotify_uri: *const c_char) -> Result<core::SpotifyUri, c_i
     }
 
     Ok(uri)
+}
+
+fn unsupported(kind: &str, name: &str) -> c_int {
+    set_error(format!("{kind} {name} is not supported by this build"));
+    LIBRESPOT_ERR_UNSUPPORTED
+}
+
+fn resolve_mixer_name(mixer_type: c_int) -> Result<&'static str, c_int> {
+    match mixer_type {
+        0 | 1 => Ok("softvol"),
+        2 if cfg!(feature = "backend-alsa") => Ok("alsa"),
+        2 => Err(unsupported("mixer", "alsa")),
+        _ => {
+            set_error(format!("invalid mixer type: {mixer_type}"));
+            Err(LIBRESPOT_ERR_INVALID_ARGUMENT)
+        }
+    }
+}
+
+fn resolve_audio_backend_name(audio_backend: c_int) -> Result<&'static str, c_int> {
+    match audio_backend {
+        0 | 1 => Ok("rodio"),
+        2 if cfg!(feature = "backend-alsa") => Ok("alsa"),
+        3 if cfg!(feature = "backend-portaudio") => Ok("portaudio"),
+        4 if cfg!(feature = "backend-pulseaudio") => Ok("pulseaudio"),
+        5 if cfg!(feature = "backend-jack") => Ok("jackaudio"),
+        6 if cfg!(feature = "backend-gstreamer") => Ok("gstreamer"),
+        7 if cfg!(feature = "backend-rodiojack") => Ok("rodiojack"),
+        8 if cfg!(feature = "backend-sdl") => Ok("sdl"),
+        9 => Ok("pipe"),
+        10 => Ok("subprocess"),
+        2 => Err(unsupported("audio backend", "alsa")),
+        3 => Err(unsupported("audio backend", "portaudio")),
+        4 => Err(unsupported("audio backend", "pulseaudio")),
+        5 => Err(unsupported("audio backend", "jack")),
+        6 => Err(unsupported("audio backend", "gstreamer")),
+        7 => Err(unsupported("audio backend", "rodiojack")),
+        8 => Err(unsupported("audio backend", "sdl")),
+        _ => {
+            set_error(format!("invalid audio backend: {audio_backend}"));
+            Err(LIBRESPOT_ERR_INVALID_ARGUMENT)
+        }
+    }
 }
 
 #[repr(C)]
@@ -220,7 +263,7 @@ pub struct Mixer(Arc<dyn mixer::Mixer>);
 #[no_mangle]
 pub extern "C" fn mixer_new(
     mixer_config: *mut MixerConfig,
-    mixer_name: *const c_char,
+    mixer_type: c_int,
 ) -> *mut Mixer {
     ffi_guard(ptr::null_mut(), || {
         clear_error();
@@ -230,22 +273,15 @@ pub extern "C" fn mixer_new(
             return ptr::null_mut();
         }
 
-        let mixer_name = if mixer_name.is_null() {
-            None
-        } else {
-            match string_from_c(mixer_name, "mixer_name") {
-                Ok(mixer_name) => Some(mixer_name),
-                Err(_) => return ptr::null_mut(),
-            }
+        let mixer_name = match resolve_mixer_name(mixer_type) {
+            Ok(mixer_name) => mixer_name,
+            Err(_) => return ptr::null_mut(),
         };
 
-        let mixer_fn = match mixer::find(mixer_name) {
+        let mixer_fn = match mixer::find(Some(mixer_name)) {
             Some(mixer_fn) => mixer_fn,
             None => {
-                set_error(format!(
-                    "mixer not found: {}",
-                    mixer_name.unwrap_or("default")
-                ));
+                set_error(format!("mixer not found: {mixer_name}"));
                 return ptr::null_mut();
             }
         };
@@ -754,7 +790,7 @@ pub extern "C" fn player_new(
     player_config: *mut PlayerConfig,
     session: *mut Session,
     mixer: *mut Mixer,
-    audio_backend: *const c_char,
+    audio_backend: c_int,
 ) -> *mut Player {
     ffi_guard(ptr::null_mut(), || {
         clear_error();
@@ -772,16 +808,12 @@ pub extern "C" fn player_new(
             return ptr::null_mut();
         }
 
-        let audio_backend_name = if audio_backend.is_null() {
-            "rodio".to_owned()
-        } else {
-            match string_from_c(audio_backend, "audio_backend") {
-                Ok(audio_backend) => audio_backend.to_owned(),
-                Err(_) => return ptr::null_mut(),
-            }
+        let audio_backend_name = match resolve_audio_backend_name(audio_backend) {
+            Ok(audio_backend_name) => audio_backend_name,
+            Err(_) => return ptr::null_mut(),
         };
 
-        let sink_builder = match audio_backend::find(Some(audio_backend_name.clone())) {
+        let sink_builder = match audio_backend::find(Some(audio_backend_name.to_owned())) {
             Some(sink_builder) => sink_builder,
             None => {
                 set_error(format!("audio backend not found: {audio_backend_name}"));

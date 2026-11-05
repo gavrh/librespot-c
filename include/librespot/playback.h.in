@@ -32,8 +32,20 @@ extern LibrespotStatus mixer_config_set_volume_ctrl_with_range(
     double db_range
 );
 
+typedef enum {
+    MIXER_DEFAULT = 0,
+    MIXER_SOFTVOL = 1,
+@LIBRESPOT_MIXER_ENUMS@} MixerType;
+
+typedef enum {
+    BACKEND_DEFAULT = 0,
+    BACKEND_RODIO = 1,@LIBRESPOT_BACKEND_ENUMS@
+    BACKEND_PIPE = 9,
+    BACKEND_SUBPROCESS = 10
+} AudioBackend;
+
 typedef struct Mixer Mixer;
-extern Mixer* mixer_new(MixerConfig* mixer_config, const char* mixer_name);
+extern Mixer* mixer_new(MixerConfig* mixer_config, MixerType mixer_type);
 extern void mixer_free(Mixer* mixer);
 extern uint16_t mixer_get_volume(Mixer* mixer);
 extern LibrespotStatus mixer_set_volume(Mixer* mixer, uint16_t volume);
@@ -112,7 +124,12 @@ extern LibrespotStatus player_config_set_ditherer(
 );
 
 typedef struct Player Player;
-extern Player* player_new(PlayerConfig* player_config, Session* session, Mixer* mixer, const char* audio_backend);
+extern Player* player_new(
+    PlayerConfig* player_config,
+    Session* session,
+    Mixer* mixer,
+    AudioBackend audio_backend
+);
 extern void player_free(Player* player);
 extern bool player_is_valid(Player* player);
 extern LibrespotStatus player_load(Player* player, const char* spotify_uri, bool start_playing, uint32_t position_ms);

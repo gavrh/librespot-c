@@ -18,6 +18,37 @@ cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
 cmake --build build --config Release --parallel
 ```
 
+The default build uses the rodio backend and the softvol mixer. It needs no extra flags or optional system audio dependencies.
+
+CMake is the supported path for building the C bindings: it generates the public playback header for the selected backend options and passes the selected Cargo features to the Rust build.
+
+## Audio backends
+
+Optional audio backends are OFF by default. Enable one or more when configuring:
+
+| Backend | CMake option | Cargo feature |
+| --- | --- | --- |
+| ALSA | `-DLIBRESPOT_BACKEND_ALSA=ON` | `backend-alsa` |
+| PulseAudio | `-DLIBRESPOT_BACKEND_PULSEAUDIO=ON` | `backend-pulseaudio` |
+| JACK | `-DLIBRESPOT_BACKEND_JACK=ON` | `backend-jack` |
+| PortAudio | `-DLIBRESPOT_BACKEND_PORTAUDIO=ON` | `backend-portaudio` |
+| SDL | `-DLIBRESPOT_BACKEND_SDL=ON` | `backend-sdl` |
+| GStreamer | `-DLIBRESPOT_BACKEND_GSTREAMER=ON` | `backend-gstreamer` |
+| rodio JACK | `-DLIBRESPOT_BACKEND_RODIOJACK=ON` | `backend-rodiojack` |
+
+For example, to build with ALSA and PulseAudio:
+
+```sh
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Release \
+    -DLIBRESPOT_BACKEND_ALSA=ON \
+    -DLIBRESPOT_BACKEND_PULSEAUDIO=ON
+cmake --build build --config Release --parallel
+```
+
+Backend and mixer enum values are compile-time values. A value that was not enabled is absent from the public `librespot/playback.h`, so referencing it in C is a compile error. `LIBRESPOT_ERR_UNSUPPORTED` only protects against stale headers, mismatched installations, or values cast from arbitrary integers at runtime.
+
+The `pipe` and `subprocess` backends are always available. `pipe` writes raw PCM to standard output. `subprocess` requires a command, which the current API cannot provide, so it may fail at runtime.
+
 ## Install
 
 ```sh
@@ -58,8 +89,8 @@ Quick Start Variables:
 | --- | --- |
 | SPOTIFY_API_CLIENT_ID | 65b708073fc0480ea92a077233ca87bd (Spotify's client id) |
 | REDIRECT_URI | http://127.0.0.1:8888/login |
-| MIXER | softvol |
-| BACKEND | rodio |
+| MIXER | MIXER_DEFAULT |
+| BACKEND | BACKEND_DEFAULT |
 | TRACK_URI | spotify:track:02JIdsrod3BYucThfUFDUX |
 
 ```c
@@ -100,11 +131,11 @@ int main(void) {
 
     // create the mixer and player
     MixerConfig* mixer_config = mixer_config_default();
-    Mixer* mixer = mixer_new(mixer_config, "softvol");
+    Mixer* mixer = mixer_new(mixer_config, MIXER_DEFAULT);
     mixer_config_free(mixer_config);
 
     PlayerConfig* player_config = player_config_default();
-    Player* player = player_new(player_config, session, mixer, "rodio");
+    Player* player = player_new(player_config, session, mixer, BACKEND_DEFAULT);
     player_config_free(player_config);
 
     // load a track

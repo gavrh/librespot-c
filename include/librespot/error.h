@@ -9,7 +9,8 @@ typedef enum LibrespotStatus {
     LIBRESPOT_OK = 0,
     LIBRESPOT_ERR_INVALID_ARGUMENT = -1,
     LIBRESPOT_ERR_INVALID_STRING = -2,
-    LIBRESPOT_ERR_FAILED = -3
+    LIBRESPOT_ERR_FAILED = -3,
+    LIBRESPOT_ERR_UNSUPPORTED = -4
 } LibrespotStatus;
 
 extern const char* librespot_last_error(void);
