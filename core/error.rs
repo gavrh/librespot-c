@@ -9,6 +9,8 @@ pub(crate) const LIBRESPOT_ERR_INVALID_ARGUMENT: c_int = -1;
 #[allow(dead_code)]
 pub(crate) const LIBRESPOT_ERR_INVALID_STRING: c_int = -2;
 pub(crate) const LIBRESPOT_ERR_FAILED: c_int = -3;
+#[allow(dead_code)]
+pub(crate) const LIBRESPOT_ERR_UNSUPPORTED: c_int = -4;
 
 static EMPTY_ERROR: &[u8] = b"\0";
 

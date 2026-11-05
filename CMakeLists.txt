@@ -5,6 +5,47 @@ project(librespot VERSION 1.0.0 LANGUAGES C)
 include(CMakePackageConfigHelpers)
 include(GNUInstallDirs)
 
+option(LIBRESPOT_BACKEND_ALSA "Build ALSA backend" OFF)
+option(LIBRESPOT_BACKEND_PULSEAUDIO "Build PulseAudio backend" OFF)
+option(LIBRESPOT_BACKEND_JACK "Build JACK backend" OFF)
+option(LIBRESPOT_BACKEND_PORTAUDIO "Build PortAudio backend" OFF)
+option(LIBRESPOT_BACKEND_SDL "Build SDL backend" OFF)
+option(LIBRESPOT_BACKEND_GSTREAMER "Build GStreamer backend" OFF)
+option(LIBRESPOT_BACKEND_RODIOJACK "Build rodio JACK backend" OFF)
+
+set(LIBRESPOT_MIXER_ENUMS "")
+set(LIBRESPOT_BACKEND_ENUMS "")
+
+if(LIBRESPOT_BACKEND_ALSA)
+    string(APPEND LIBRESPOT_MIXER_ENUMS "    MIXER_ALSA = 2,\n")
+    string(APPEND LIBRESPOT_BACKEND_ENUMS "    BACKEND_ALSA = 2,\n")
+endif()
+if(LIBRESPOT_BACKEND_PORTAUDIO)
+    string(APPEND LIBRESPOT_BACKEND_ENUMS "    BACKEND_PORTAUDIO = 3,\n")
+endif()
+if(LIBRESPOT_BACKEND_PULSEAUDIO)
+    string(APPEND LIBRESPOT_BACKEND_ENUMS "    BACKEND_PULSEAUDIO = 4,\n")
+endif()
+if(LIBRESPOT_BACKEND_JACK)
+    string(APPEND LIBRESPOT_BACKEND_ENUMS "    BACKEND_JACK = 5,\n")
+endif()
+if(LIBRESPOT_BACKEND_GSTREAMER)
+    string(APPEND LIBRESPOT_BACKEND_ENUMS "    BACKEND_GSTREAMER = 6,\n")
+endif()
+if(LIBRESPOT_BACKEND_RODIOJACK)
+    string(APPEND LIBRESPOT_BACKEND_ENUMS "    BACKEND_RODIOJACK = 7,\n")
+endif()
+if(LIBRESPOT_BACKEND_SDL)
+    string(APPEND LIBRESPOT_BACKEND_ENUMS "    BACKEND_SDL = 8,\n")
+endif()
+
+file(MAKE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/include/librespot")
+configure_file(
+    "${CMAKE_CURRENT_SOURCE_DIR}/include/librespot/playback.h.in"
+    "${CMAKE_CURRENT_BINARY_DIR}/include/librespot/playback.h"
+    @ONLY
+)
+
 set(CMAKE_C_STANDARD 99)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 set(CMAKE_C_EXTENSIONS OFF)
@@ -21,8 +62,19 @@ add_library(${PROJECT_NAME} STATIC ${EMPTY_SRC} ${HEADER_FILES})
 set_target_properties(${PROJECT_NAME} PROPERTIES LINKER_LANGUAGE C)
 target_include_directories(${PROJECT_NAME}
     PUBLIC
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/include>
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
         $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
+)
+
+set(HEADER_CHECK_SRC "${CMAKE_CURRENT_BINARY_DIR}/header_check.c")
+file(WRITE ${HEADER_CHECK_SRC}
+    "#include <librespot/playback.h>\n#include <librespot/error.h>\n\nvoid librespot_header_check(void) {}\n")
+add_library(${PROJECT_NAME}_header_check OBJECT ${HEADER_CHECK_SRC})
+target_include_directories(${PROJECT_NAME}_header_check
+    PRIVATE
+        ${CMAKE_CURRENT_BINARY_DIR}/include
+        ${CMAKE_CURRENT_SOURCE_DIR}/include
 )
 
 if(WIN32)
@@ -54,9 +106,33 @@ if(WIN32)
     )
 endif()
 
+set(LIBRESPOT_CARGO_FEATURES backend-rodio)
+if(LIBRESPOT_BACKEND_ALSA)
+    list(APPEND LIBRESPOT_CARGO_FEATURES backend-alsa)
+endif()
+if(LIBRESPOT_BACKEND_PULSEAUDIO)
+    list(APPEND LIBRESPOT_CARGO_FEATURES backend-pulseaudio)
+endif()
+if(LIBRESPOT_BACKEND_JACK)
+    list(APPEND LIBRESPOT_CARGO_FEATURES backend-jack)
+endif()
+if(LIBRESPOT_BACKEND_PORTAUDIO)
+    list(APPEND LIBRESPOT_CARGO_FEATURES backend-portaudio)
+endif()
+if(LIBRESPOT_BACKEND_SDL)
+    list(APPEND LIBRESPOT_CARGO_FEATURES backend-sdl)
+endif()
+if(LIBRESPOT_BACKEND_GSTREAMER)
+    list(APPEND LIBRESPOT_CARGO_FEATURES backend-gstreamer)
+endif()
+if(LIBRESPOT_BACKEND_RODIOJACK)
+    list(APPEND LIBRESPOT_CARGO_FEATURES backend-rodiojack)
+endif()
+string(JOIN " " LIBRESPOT_CARGO_FEATURE_ARGS ${LIBRESPOT_CARGO_FEATURES})
+
 add_custom_target(
     ${PROJECT_NAME}_rust
-    COMMAND cargo build --release
+    COMMAND cargo build --release --no-default-features --features ${LIBRESPOT_CARGO_FEATURE_ARGS}
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/core
 )
 add_custom_command(
@@ -79,7 +155,7 @@ install(
 )
 
 install(
-    FILES ${HEADER_FILES}
+    FILES ${HEADER_FILES} ${CMAKE_CURRENT_BINARY_DIR}/include/librespot/playback.h
     DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/${PROJECT_NAME}
 )
 
